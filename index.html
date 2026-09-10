@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>name that! — nt!</title>
+<meta name="description" content="name that! — a map of thinking. click to expand.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+  @font-face{
+    font-family:'Latin Modern Math';
+    src: url('https://mathfonts.github.io/LatinModern/latinmodern-math.woff2') format('woff2'),
+         url('https://mathfonts.github.io/LatinModern/latinmodern-math.woff') format('woff');
+    font-weight:400;font-style:normal;font-display:swap;
+  }
+  :root{
+    --black:#111110; --white:#ffffff; --grey-light:#e4e2dd;
+    --gutter: clamp(20px,4vw,64px);
+    --font-body:'Manrope',-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;
+    --font-display:'Latin Modern Math','STIX Two Text','Cambria Math',Georgia,serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;overflow:hidden;background:var(--white);color:var(--black);}
+  body{font-family:var(--font-body);font-weight:400;-webkit-font-smoothing:antialiased;}
+  @media (prefers-reduced-motion: reduce){*{animation-duration:0.01ms !important;transition-duration:0.01ms !important;}}
+  a{color:inherit;text-decoration:none;}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:left;}
+  a:focus-visible, button:focus-visible{outline:2px solid var(--black);outline-offset:3px;}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+
+  .brand-hover{font-family:var(--font-body);font-style:normal;text-transform:none;transition:font-family .18s ease,font-style .18s ease,opacity .3s ease;}
+  .brand-hover:hover,.brand-hover:focus-visible{font-family:var(--font-display);font-style:italic;text-transform:lowercase;}
+
+  /* ---------- Preloader ---------- */
+  #preloader{position:fixed;inset:0;z-index:1000;background:var(--white);display:flex;align-items:center;justify-content:center;transition:opacity .6s ease;}
+  #preloader.hide{opacity:0;pointer-events:none;}
+  #preloader-mark{font-family:var(--font-display);font-style:italic;font-size:clamp(32px,7vw,90px);color:var(--black);text-transform:lowercase;}
+
+  /* ---------- Header ---------- */
+  header{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:22px var(--gutter);mix-blend-mode:difference;color:var(--white);pointer-events:none;}
+  header *{pointer-events:auto;}
+  .logo{font-family:var(--font-display);font-style:italic;font-size:23px;font-weight:400;letter-spacing:0.01em;width:175px;white-space:nowrap;overflow:visible;text-align:left;}
+  #resetMap{font-size:12px;letter-spacing:0.06em;}
+
+  #langToggle{position:fixed;right:var(--gutter);bottom:24px;z-index:60;font-size:12px;letter-spacing:0.06em;padding:8px 13px;border:1px solid var(--grey-light);background:var(--white);}
+
+  /* ---------- Graph canvas ---------- */
+  #stage{position:fixed;inset:0;z-index:1;}
+  #graphSvg{width:100%;height:100%;display:block;cursor:grab;}
+  #graphSvg.dragging{cursor:grabbing;}
+  .link{stroke:#111110;stroke-opacity:0.18;stroke-width:1;fill:none;}
+
+  .node-fo{overflow:visible;}
+  .node-wrap{width:100%;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;}
+  .node-wrap.align-left{justify-content:flex-start;text-align:left;}
+
+  .n-seed .n-btn{font-family:var(--font-display);font-style:italic;text-transform:lowercase;font-size:clamp(34px,4.6vw,58px);line-height:1;white-space:nowrap;cursor:pointer;}
+  .n-main .n-btn{font-family:var(--font-display);font-style:italic;text-transform:lowercase;font-size:clamp(26px,3.2vw,42px);line-height:1;white-space:nowrap;transition:opacity .3s ease;}
+  .n-main .n-btn:hover{opacity:0.5;}
+  .n-tag .n-btn{letter-spacing:0.01em;white-space:nowrap;}
+  .n-project .n-btn,.n-research .n-btn{display:flex;flex-direction:column;gap:4px;max-width:230px;}
+  .n-project .n-title,.n-research .n-title{font-size:16px;line-height:1.25;}
+  .n-project .n-meta,.n-research .n-meta{font-size:10.5px;letter-spacing:0.02em;}
+  .n-question .n-btn{font-family:var(--font-display);font-style:italic;text-transform:lowercase;font-size:15px;line-height:1.3;max-width:270px;transition:opacity .3s ease;}
+  .n-question .n-btn:hover{opacity:0.5;}
+
+  .node-item.is-dimmed{opacity:0.2;}
+  .node-item.is-matched{opacity:1;}
+
+  #hint{position:fixed;left:0;right:0;bottom:26px;z-index:5;text-align:center;font-size:12px;letter-spacing:0.04em;color:var(--black);pointer-events:none;transition:opacity .5s ease;}
+  #hint.gone{opacity:0;}
+
+  /* ================= Expanded card (drum + annotations), lives INSIDE the graph node ================= */
+  .expanded-card{position:relative;width:100%;height:100%;background:var(--white);border:1px solid var(--grey-light);padding:22px 26px;overflow:hidden;cursor:default;}
+  .expanded-close{position:absolute;top:14px;right:16px;font-size:20px;line-height:1;}
+  .expanded-kicker{font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;}
+  .expanded-title{font-size:19px;font-weight:500;letter-spacing:-0.005em;margin-bottom:4px;max-width:75%;line-height:1.25;}
+  .expanded-title.q-style{font-family:var(--font-display);font-style:italic;text-transform:lowercase;font-size:20px;}
+  .expanded-meta{font-size:11px;display:flex;gap:14px;margin-bottom:10px;flex-wrap:wrap;}
+
+  .drum-zone{position:relative;height:150px;margin:14px auto 30px;display:flex;align-items:center;justify-content:center;}
+  .drum-stage{perspective:850px;width:180px;height:118px;position:relative;cursor:grab;}
+  .drum-stage:active{cursor:grabbing;}
+  .drum-ring{width:100%;height:100%;position:relative;transform-style:preserve-3d;}
+  .drum-card{position:absolute;top:0;left:0;width:180px;height:118px;border:1px solid var(--grey-light);background:var(--white);backface-visibility:hidden;}
+  .drum-card svg{width:100%;height:100%;display:block;}
+  .drum-controls{position:absolute;bottom:-30px;left:0;right:0;display:flex;justify-content:center;gap:22px;font-size:15px;}
+
+  .expanded-body{font-size:13.5px;line-height:1.6;max-width:none;margin-bottom:16px;}
+
+  .expanded-annotations{display:grid;grid-template-columns:1fr 1fr;gap:14px 22px;}
+  .expanded-annotations--single{grid-template-columns:1fr;}
+  .ann-block{border-top:1px solid var(--grey-light);padding-top:8px;}
+  .ann-label{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;}
+  .expanded-tags,.expanded-related{display:flex;flex-wrap:wrap;gap:.4em .9em;font-size:11.5px;}
+  .expanded-related{flex-direction:column;gap:5px;}
+
+  .expanded-card.next-card .expanded-body{font-size:15px;line-height:1.65;}
+  .next-grid-mini{display:grid;grid-template-columns:1fr 1fr;gap:16px 24px;margin-top:18px;}
+  .next-grid-mini .ncol p{font-size:12.5px;line-height:1.55;}
+  .next-grid-mini .ncol .contact-email{font-size:16px;font-weight:500;display:inline-block;margin-bottom:4px;}
+  .next-grid-mini .social-list{display:flex;flex-direction:column;gap:4px;margin-top:4px;}
+
+  /* ---------- Project drum: frameless, isometric, all cards visible, text co-rotates ---------- */
+  .drum-comp{position:relative;width:100%;height:100%;background:transparent;cursor:default;}
+  .drum-comp .expanded-close{z-index:5;}
+  .drum-kicker{position:absolute;top:16px;left:20px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;z-index:4;}
+  .drum-scene{position:absolute;inset:0;perspective:1500px;}
+  .drum-tilt{width:100%;height:100%;position:relative;transform-style:preserve-3d;transform:rotateX(54deg);}
+  .drum-ring3d{width:100%;height:100%;position:absolute;top:0;left:0;transform-style:preserve-3d;}
+  .drum-card3d{position:absolute;top:50%;left:50%;width:132px;height:90px;margin:-45px 0 0 -66px;transform-style:preserve-3d;backface-visibility:hidden;}
+  .drum-card3d svg{width:100%;height:100%;display:block;box-shadow:0 0 0 1px rgba(17,17,16,.18);background:#fff;}
+  .drum-label3d{position:absolute;top:50%;left:50%;width:170px;margin:-46px 0 0 -85px;transform-style:preserve-3d;text-align:center;}
+  .drum-label3d .lbl-face{position:absolute;top:0;left:0;width:100%;backface-visibility:hidden;}
+  .drum-label3d .lbl-back{transform:rotateY(180deg);}
+  .drum-label3d .lbl-inner{font-size:10.5px;line-height:1.45;}
+  .drum-label3d .lbl-inner strong{display:block;font-weight:500;font-size:12.5px;margin-bottom:3px;}
+  .drum-label3d .lbl-inner .ann-related-btn{display:block;font-size:10.5px;margin-top:3px;}
+</style>
+</head>
+<body>
+
+<div id="preloader" aria-hidden="true"><div id="preloader-mark">nt!</div></div>
+
+<header>
+  <button class="logo" id="logo" aria-label="nt! — reset map">nt!</button>
+  <button id="resetMap" class="brand-hover"></button>
+</header>
+
+<div id="stage">
+  <svg id="graphSvg">
+    <g id="viewport">
+      <g id="linksLayer"></g>
+      <g id="nodesLayer"></g>
+    </g>
+  </svg>
+</div>
+
+<div id="hint"></div>
+<button id="langToggle" class="brand-hover">RU</button>
+
+<script>
+/* ============================================================
+   I18N
+   ============================================================ */
+var currentLang = 'en';
+function L(obj){ if(!obj) return ''; return obj[currentLang] || obj.en; }
+
+var UI = {
+  hint:{en:'click to expand. drag to move. scroll to zoom.', ru:'нажмите, чтобы раскрыть. перетащите, чтобы передвинуть. прокрутите для масштаба.'},
+  resetMap:{en:'reset map', ru:'сбросить карту'},
+  tags:{en:'Tags', ru:'Теги'},
+  related:{en:'Related', ru:'Связанное'},
+  leadsTo:{en:'Leads to', ru:'Ведёт к'},
+  practice:{en:'Practice', ru:'Практика'},
+  founder:{en:'Founder', ru:'Основатель'},
+  availability:{en:'Availability', ru:'Доступность'},
+  elsewhere:{en:'Elsewhere', ru:'Также'},
+  contact:{en:'Contact', ru:'Контакт'},
+  inviteLine:{en:"have a territory. have a question. have an idea.", ru:"есть территория. есть вопрос. есть идея."},
+  contactNote:{en:'We read everything. We reply to the ones with a real question.', ru:'Мы читаем всё. Отвечаем тем, у кого есть настоящий вопрос.'},
+  practiceDesc:{en:"name that! is an independent spatial practice working across architecture, urbanism, landscape and research. We take on masterplans, competitions and territorial strategy alongside self-initiated work that has no client at all.",
+    ru:"name that! — независимая пространственная практика на пересечении архитектуры, урбанизма, ландшафта и исследований. Мы занимаемся мастер-планами, конкурсами и территориальными стратегиями, а также инициативными проектами без заказчика."},
+  founderName:{en:'Ilya Sorokin', ru:'Илья Сорокин'},
+  founderRole:{en:'Architect / Founder', ru:'Архитектор / Основатель'},
+  founderBio:{en:"Trained in Moscow and Rotterdam, working internationally since 2021. Moves between built projects and research without treating either as the side work.",
+    ru:"Учился в Москве и Роттердаме, работает международно с 2021 года. Совмещает построенные проекты и исследования, не считая ни одно из них второстепенным."},
+  availabilityText:{en:"Based between Moscow and Rotterdam.<br>Working internationally.<br>Open to new territories, 2026–27.",
+    ru:"Между Москвой и Роттердамом.<br>Работаем международно.<br>Открыты к новым территориям, 2026–27."}
+};
+
+var TAG_LABEL = {
+  water:{en:'water',ru:'вода'},
+  infrastructure:{en:'infrastructure',ru:'инфраструктура'},
+  landscape:{en:'landscape',ru:'ландшафт'},
+  territory:{en:'territory',ru:'территория'},
+  ecology:{en:'ecology',ru:'экология'},
+  future:{en:'future',ru:'будущее'},
+  research:{en:'research',ru:'исследование'},
+  computation:{en:'computation',ru:'вычисления'},
+  software:{en:'software',ru:'софт'},
+  density:{en:'density',ru:'плотность'},
+  'public space':{en:'public space',ru:'общественное пространство'}
+};
+
+/* ============================================================
+   DATA
+   ============================================================ */
+var SVGART = {
+  p1a:'<svg viewBox="0 0 800 450"><rect width="800" height="450" fill="#ffffff"/><path d="M0,300 C150,260 250,330 400,280 C550,230 650,300 800,260" stroke="#111110" stroke-width="1.2" fill="none" opacity="0.5"/><path d="M0,340 C150,300 250,360 400,320 C550,280 650,340 800,300" stroke="#111110" stroke-width="1" fill="none" opacity="0.3"/><g stroke="#111110" stroke-width="1" opacity="0.7"><line x1="60" y1="60" x2="60" y2="230"/><line x1="140" y1="60" x2="140" y2="200"/><line x1="220" y1="60" x2="220" y2="245"/><line x1="60" y1="60" x2="220" y2="60"/></g><g fill="#111110" opacity="0.85"><rect x="320" y="120" width="60" height="60"/><rect x="400" y="150" width="40" height="90"/><rect x="460" y="100" width="30" height="150"/></g></svg>',
+  p1b:'<svg viewBox="0 0 800 450"><rect width="800" height="450" fill="#ffffff"/><line x1="0" y1="330" x2="800" y2="330" stroke="#111110" stroke-width="1" opacity="0.6"/><g fill="#111110" opacity="0.75"><polygon points="140,330 140,240 190,240 190,330"/><polygon points="220,330 220,200 260,200 260,330"/><polygon points="600,330 600,260 650,260 650,330"/></g><g stroke="#111110" stroke-width="1" opacity="0.4"><path d="M300,330 Q320,300 300,270 Q280,300 300,330"/><path d="M340,330 Q360,295 340,260 Q320,295 340,330"/><path d="M500,330 Q520,300 500,270 Q480,300 500,330"/></g></svg>',
+  p1c:'<svg viewBox="0 0 800 450"><rect width="800" height="450" fill="#ffffff"/><g stroke="#111110" stroke-width="0.6" opacity="0.5"><line x1="0" y1="90" x2="800" y2="90"/><line x1="0" y1="180" x2="800" y2="180"/><line x1="0" y1="270" x2="800" y2="270"/><line x1="0" y1="360" x2="800" y2="360"/><line x1="160" y1="0" x2="160" y2="450"/><line x1="400" y1="0" x2="400" y2="450"/><line x1="600" y1="0" x2="600" y2="450"/></g><rect x="160" y="90" width="240" height="180" fill="#111110" opacity="0.12"/><rect x="400" y="180" width="200" height="180" fill="#111110" opacity="0.06"/></svg>',
+
+  p2a:'<svg viewBox="0 0 800 450"><rect width="800" height="450" fill="#ffffff"/><g stroke="#111110" stroke-width="0.7" opacity="0.55"><polygon points="400,80 460,120 460,190 400,230 340,190 340,120"/><polygon points="400,150 470,195 470,270 400,315 330,270 330,195"/><polygon points="400,225 500,275 500,370 400,420 300,370 300,275"/></g><g stroke="#111110" stroke-width="1" opacity="0.9"><line x1="400" y1="80" x2="400" y2="420"/><line x1="300" y1="250" x2="500" y2="250"/></g></svg>',
+  p2b:'<svg viewBox="0 0 800 450"><rect width="800" height="450" fill="#ffffff"/><line x1="0" y1="340" x2="800" y2="340" stroke="#111110" stroke-width="1" opacity="0.6"/><polygon points="250,340 400,150 550,340" fill="none" stroke="#111110" stroke-width="1.2" opacity="0.85"/><line x1="300" y1="340" x2="400" y2="210" stroke="#111110" stroke-width="0.6" opacity="0.4"/><line x1="500" y1="340" x2="400" y2="210" stroke="#111110" stroke-width="0.6" opacity="0.4"/></svg>',
+  p2c:'<svg viewBox="0 0 800 450"><rect width="800" height="450" fill="#ffffff"/><g stroke="#111110" stroke-width="0.6" opacity="0.6"><polygon points="150,80 190,120 150,160 110,120"/><polygon points="230,80 270,120 230,160 190,120"/><polygon points="310,80 350,120 310,160 270,120"/><polygon points="190,150 230,190 190,230 150,190"/><polygon points="270,150 310,190 270,230 230,190"/><polygon points="150,220 190,260 150,300 110,260"/><polygon points="230,220 270,260 230,300 190,260"/></g></svg>',
+
+  p3a:'<svg viewBox="0 0 800 450"><rect width="800" height="450" fill="#ffffff"/><path d="M0,120 C100,140 180,90 280,110 C380,130 460,95 560,120 C660,145 720,110 800,130" stroke="#111110" stroke-width="1" fill="none" opacity="0.8"/><path d="M0,160 C100,185 180,150 280,168 C380,186 460,150 560,172 C660,194 720,165 800,180" stroke="#111110" stroke-width="0.8" fill="none" stroke-dasharray="2 4" opacity="0.5"/><path d="M0,200 C100,222 180,196 280,210 C380,224 460,198 560,214 C660,230 720,206 800,220" stroke="#111110" stroke-width="0.6" fill="none" stroke-dasharray="1 5" opacity="0.35"/></svg>',
+  p3b:'<svg viewBox="0 0 800 450"><rect width="800" height="450" fill="#ffffff"/><path d="M40,80 C160,130 220,220 180,300 C140,370 260,410 400,380 C540,350 600,260 700,300" stroke="#111110" stroke-width="1" fill="none" opacity="0.7"/><circle cx="160" cy="130" r="5" fill="#111110" opacity="0.8"/><circle cx="220" cy="260" r="5" fill="#111110" opacity="0.8"/><circle cx="400" cy="380" r="5" fill="#111110" opacity="0.8"/><circle cx="620" cy="290" r="5" fill="#111110" opacity="0.8"/></svg>',
+  p3c:'<svg viewBox="0 0 800 450"><rect width="800" height="450" fill="#ffffff"/><line x1="60" y1="380" x2="740" y2="380" stroke="#111110" stroke-width="0.7" opacity="0.6"/><line x1="60" y1="380" x2="60" y2="60" stroke="#111110" stroke-width="0.7" opacity="0.6"/><g fill="#111110" opacity="0.75"><rect x="100" y="330" width="40" height="50"/><rect x="220" y="290" width="40" height="90"/><rect x="340" y="240" width="40" height="140"/><rect x="460" y="180" width="40" height="200"/><rect x="580" y="120" width="40" height="260"/></g></svg>',
+
+  r1:'<svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#ffffff"/><path d="M0,80 Q100,40 200,90 T400,70" stroke="#111110" stroke-width="1" fill="none" opacity="0.7"/><path d="M0,120 Q100,90 200,130 T400,110" stroke="#111110" stroke-width="0.7" fill="none" opacity="0.4" stroke-dasharray="2 5"/></svg>',
+  r2:'<svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#ffffff"/><g stroke="#111110" stroke-width="0.6" opacity="0.6"><line x1="20" y1="40" x2="380" y2="40"/><line x1="20" y1="80" x2="380" y2="80"/><line x1="20" y1="120" x2="380" y2="120"/><line x1="20" y1="160" x2="380" y2="160"/></g><rect x="60" y="60" width="30" height="30" fill="#111110" opacity="0.8"/><rect x="140" y="90" width="18" height="18" fill="#111110" opacity="0.5"/><rect x="230" y="50" width="45" height="45" fill="#111110" opacity="0.3"/></svg>',
+  r4:'<svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#ffffff"/><rect x="60" y="40" width="90" height="90" fill="none" stroke="#111110" stroke-width="1" opacity="0.8"/><rect x="150" y="40" width="90" height="90" fill="none" stroke="#111110" stroke-width="1" opacity="0.4" stroke-dasharray="3 4"/><rect x="60" y="130" width="90" height="90" fill="none" stroke="#111110" stroke-width="1" opacity="0.4" stroke-dasharray="3 4"/><rect x="150" y="130" width="90" height="90" fill="none" stroke="#111110" stroke-width="1" opacity="0.8"/></svg>'
+};
+
+var DB = {};
+[
+  {id:'seed',type:'seed',title:"name what’s next."},
+  {id:'that',type:'main',title:'THAT!'},
+  {id:'think',type:'main',title:'THINK'},
+  {id:'next',type:'main',title:'NEXT'},
+
+  {id:'p1',type:'project',title:'Gorky Edge',
+    meta:{en:'Moscow, RU / 2025',ru:'Москва, РФ / 2025'},
+    kind:{en:'Masterplan / Landscape / Urban strategy',ru:'Мастер-план / Ландшафт / Урбанистическая стратегия'},
+    body:{en:"A 4.2 km industrial riverbank reconsidered as public terrain. The masterplan treats the water's edge as a working section rather than a boundary — flood, program and ecology layered instead of separated.",
+      ru:"4,2 км промышленного берега реки, переосмысленного как общественная территория. Мастер-план рассматривает набережную не как границу, а как рабочий разрез — паводок, программа и экология наслаиваются друг на друга, а не разделяются."},
+    tags:['water','infrastructure','landscape','territory'],images:[SVGART.p1a,SVGART.p1b,SVGART.p1c],parent:'that'},
+  {id:'p2',type:'project',title:'Salt Flats Pavilion',
+    meta:{en:'Ras Al Khaimah, AE / 2024',ru:'Рас-эль-Хайма, ОАЭ / 2024'},
+    kind:{en:'Competition / Landscape architecture',ru:'Конкурс / Ландшафтная архитектура'},
+    body:{en:"An open-invitation entry for a visitor pavilion on an active salt flat. The structure reads the ground's own geometry — a shallow, radiating crust — and repeats it at a walkable scale.",
+      ru:"Конкурсная заявка на павильон для посетителей активного солончака. Структура считывает геометрию самой земли — неглубокую, лучевую корку — и повторяет её в пешеходном масштабе."},
+    tags:['landscape','ecology','territory'],images:[SVGART.p2a,SVGART.p2b,SVGART.p2c],parent:'that'},
+  {id:'p3',type:'project',title:'Silt Line',
+    meta:{en:'Kaliningrad Region, RU / 2023',ru:'Калининградская область, РФ / 2023'},
+    kind:{en:'Territorial vision / Coastal strategy',ru:'Территориальное видение / Прибрежная стратегия'},
+    body:{en:"A vision for 60 km of eroding coastline, produced for a regional development body. Rather than fixing the shore, the strategy sets rules for how settlement retreats and returns over decades.",
+      ru:"Видение для 60 км разрушающейся береговой линии, разработанное для регионального органа развития. Вместо того чтобы фиксировать берег, стратегия задаёт правила того, как поселение отступает и возвращается на протяжении десятилетий."},
+    tags:['water','territory','ecology','future'],images:[SVGART.p3a,SVGART.p3b,SVGART.p3c],parent:'that'},
+
+  {id:'r1',type:'research',title:'On erosion as a form of drawing',
+    meta:{en:'Field note — 03.2026',ru:'Полевая заметка — 03.2026'},kind:{en:'Observation',ru:'Наблюдение'},
+    body:{en:"The coast doesn't erase a line, it redraws it. Working on Silt Line, we began treating tidal retreat as a design tool rather than a threat to model against.",
+      ru:"Берег не стирает линию, он перерисовывает её. Работая над Silt Line, мы начали относиться к приливному отступлению как к инструменту проектирования, а не как к угрозе."},
+    tags:['water','ecology','research','territory'],images:[SVGART.r1],parent:'think'},
+  {id:'r2',type:'research',title:'Field.02 — slope reader',
+    meta:{en:'In progress',ru:'В процессе'},kind:{en:'Software',ru:'Программа'},
+    body:{en:"An internal tool that reads a terrain mesh and returns buildable zones by slope, without the usual GIS overhead. Still breaks on very steep faces.",
+      ru:"Внутренний инструмент, который считывает сетку рельефа и возвращает пригодные для застройки зоны по уклону, без обычной нагрузки ГИС. Пока ломается на очень крутых участках."},
+    tags:['computation','software','research'],images:[SVGART.r2],parent:'think'},
+  {id:'r3',type:'research',title:'A note on thresholds',
+    meta:{en:'Notebook — 11.2025',ru:'Блокнот — 11.2025'},kind:{en:'Text',ru:'Текст'},
+    body:{en:"A door is a threshold everyone agrees on. A coastline is a threshold no one agrees on. Most of our research lives in that second category.",
+      ru:"Дверь — это порог, с которым согласны все. Береговая линия — порог, с которым не согласен никто. Большая часть наших исследований живёт во второй категории."},
+    tags:['research','territory'],images:[],parent:'think'},
+  {id:'r4',type:'research',title:'The unbuilt courtyard',
+    meta:{en:'Ongoing, unfunded',ru:'В процессе, без финансирования'},kind:{en:'Speculative',ru:'Спекулятивное'},
+    body:{en:"A study for a courtyard type that only completes itself once three unrelated owners build their share. No client, no site — just a rule set we keep testing against real plots we pass.",
+      ru:"Исследование типа двора, который завершает себя только тогда, когда три независимых собственника застраивают свою часть. Нет заказчика, нет участка — только набор правил."},
+    tags:['density','public space','research'],images:[SVGART.r4],parent:'think'},
+
+  {id:'q1',type:'question',title:{en:'what if water became infrastructure?',ru:'что если вода станет инфраструктурой?'},tags:['water','infrastructure'],leads:['p1','r1']},
+  {id:'q2',type:'question',title:{en:'what if the edge became the city?',ru:'что если край станет городом?'},tags:['territory'],leads:['p1','p3']},
+  {id:'q3',type:'question',title:{en:'what if density was not about buildings?',ru:'что если плотность — не про здания?'},tags:['density','public space'],leads:['r4']},
+  {id:'q4',type:'question',title:{en:'what if a landscape could produce energy?',ru:'что если ландшафт мог бы производить энергию?'},tags:['landscape','ecology'],leads:['p2','r1']},
+  {id:'q5',type:'question',title:{en:'what if software could think spatially?',ru:'что если программа могла бы мыслить пространственно?'},tags:['computation','software'],leads:['r2']},
+  {id:'q6',type:'question',title:{en:'what if a question was the whole research?',ru:'что если вопрос — это и есть исследование?'},tags:['research'],leads:['r3']}
+].forEach(function(n){ DB[n.id] = n; });
+
+var LEAF_TYPES = {project:1,research:1};
+function tagWeight(tag){
+  return Object.keys(DB).filter(function(id){ return (DB[id].tags||[]).indexOf(tag)!==-1 && LEAF_TYPES[DB[id].type]; }).length;
+}
+function tagFontSize(tag){
+  var w = tagWeight(tag);
+  return w>=4?26:w>=3?21:w>=2?17:14;
+}
+function nodesWithTag(tag){
+  return Object.keys(DB).filter(function(id){ return (DB[id].tags||[]).indexOf(tag)!==-1 && LEAF_TYPES[DB[id].type]; });
+}
+
+/* ============================================================
+   GRAPH STATE
+   ============================================================ */
+var activeNodes = [];
+var activeLinks = [];
+var nodeById = {};
+var expandedNodeIds = [];
+
+function ensureNode(id, parentNode){
+  if(nodeById[id]) return nodeById[id];
+  var base = id.indexOf('tag:')===0 ? {id:id, type:'tag', tagKey:id.slice(4)} : DB[id];
+  var n = Object.assign({}, base);
+  if(parentNode){ n.x = parentNode.x + (Math.random()-0.5)*40; n.y = parentNode.y + (Math.random()-0.5)*40; }
+  else { n.x = window.innerWidth/2; n.y = window.innerHeight/2; }
+  activeNodes.push(n); nodeById[id] = n;
+  return n;
+}
+function ensureLink(aId,bId){
+  var exists = activeLinks.some(function(l){
+    var s=l.source.id||l.source, t=l.target.id||l.target;
+    return (s===aId&&t===bId)||(s===bId&&t===aId);
+  });
+  if(!exists) activeLinks.push({source:aId, target:bId});
+}
+
+function checkQuestions(){
+  Object.keys(DB).forEach(function(id){
+    var n = DB[id];
+    if(n.type!=='question') return;
+    var anyLeadActive = n.leads.some(function(l){ return !!nodeById[l]; });
+    if(anyLeadActive){
+      ensureNode(id, nodeById[n.leads.find(function(l){return nodeById[l];})]);
+      n.leads.forEach(function(l){ if(nodeById[l]) ensureLink(id, l); });
+    }
+  });
+}
+
+/* ---------- Expansion chain: seed -> THAT!/THINK/NEXT -> questions -> project/research ----------
+   A question is the ONLY thing that reveals a project or research entry — there is no
+   direct edge from THAT!/THINK straight to a leaf. If a leaf also has another lead
+   (e.g. a shared question that connects it to the other main branch), that connection
+   is kept — it just never routes directly through the main node itself. */
+function expandSeed(){
+  var seed = nodeById['seed'];
+  var angles=[-90,30,150], r=210;
+  ['that','think','next'].forEach(function(id,i){
+    var rad=angles[i]*Math.PI/180;
+    var n=ensureNode(id,null);
+    n.x=seed.x+Math.cos(rad)*r; n.y=seed.y+Math.sin(rad)*r;
+    ensureLink('seed', id);
+  });
+  render();
+}
+function relevantQuestionsFor(mainId){
+  return Object.keys(DB).filter(function(id){
+    var n = DB[id];
+    if(n.type!=='question') return false;
+    return n.leads.some(function(l){ return DB[l].parent===mainId; });
+  });
+}
+function expandMain(mainId){
+  var mainNode = nodeById[mainId];
+  relevantQuestionsFor(mainId).forEach(function(qid){
+    ensureNode(qid, mainNode);
+    ensureLink(mainId, qid);
+  });
+  render();
+}
+function activateQuestionLeads(qid){
+  var q = DB[qid];
+  q.leads.forEach(function(l){
+    ensureNode(l, nodeById[qid]);
+    ensureLink(qid, l);
+  });
+  render();
+}
+function expandTag(tagName){
+  var tagId='tag:'+tagName;
+  nodesWithTag(tagName).forEach(function(rid){
+    ensureNode(rid, nodeById[tagId]);
+    ensureLink(tagId, rid);
+  });
+  checkQuestions();
+  render();
+}
+
+/* ---------- Reachability-based collapse: clicking an already-expanded label
+   folds the structure back to it, keeping anything still reachable another way ---------- */
+function reachableExcluding(id){
+  var adjacency = {};
+  activeNodes.forEach(function(n){ adjacency[n.id] = []; });
+  activeLinks.forEach(function(l){
+    var s=l.source.id||l.source, t=l.target.id||l.target;
+    if(s===id || t===id) return;
+    if(adjacency[s]) adjacency[s].push(t);
+    if(adjacency[t]) adjacency[t].push(s);
+  });
+  var visited = {}; var queue = ['seed']; visited['seed'] = true;
+  while(queue.length){
+    var cur = queue.shift();
+    (adjacency[cur]||[]).forEach(function(nb){ if(!visited[nb]){ visited[nb]=true; queue.push(nb); } });
+  }
+  visited[id] = true;
+  return visited;
+}
+function hasDownstream(id){
+  var visited = reachableExcluding(id);
+  return activeNodes.some(function(n){ return !visited[n.id]; });
+}
+function collapseFrom(id){
+  var visited = reachableExcluding(id);
+  activeNodes = activeNodes.filter(function(n){
+    if(visited[n.id]) return true;
+    delete nodeById[n.id];
+    var i = expandedNodeIds.indexOf(n.id);
+    if(i!==-1) expandedNodeIds.splice(i,1);
+    return false;
+  });
+  activeLinks = activeLinks.filter(function(l){
+    var s=l.source.id||l.source, t=l.target.id||l.target;
+    return visited[s] && visited[t];
+  });
+}
+
+/* ---------- In-place expand/collapse of a project, research or NEXT drum ---------- */
+function toggleExpand(id){
+  var idx = expandedNodeIds.indexOf(id);
+  if(idx!==-1){
+    expandedNodeIds.splice(idx,1);
+  } else {
+    expandedNodeIds.push(id);
+    var d = DB[id];
+    if(d.type==='project'||d.type==='research'){ checkQuestions(); }
+  }
+  render();
+}
+
+function handleNodeClick(n){
+  if(n.type==='project' || n.type==='research'){ toggleExpand(n.id); return; }
+  if(n.type==='main' && n.id==='next'){ toggleExpand('next'); return; }
+
+  if(hasDownstream(n.id)){ collapseFrom(n.id); render(); return; }
+
+  if(n.type==='seed'){ expandSeed(); }
+  else if(n.type==='main'){ expandMain(n.id); }
+  else if(n.type==='tag'){ expandTag(n.tagKey); }
+  else if(n.type==='question'){ activateQuestionLeads(n.id); }
+}
+
+/* ============================================================
+   RENDER — D3 force simulation
+   ============================================================ */
+var svg = d3.select('#graphSvg');
+var viewport = d3.select('#viewport');
+var linksLayer = d3.select('#linksLayer');
+var nodesLayer = d3.select('#nodesLayer');
+var W = window.innerWidth, H = window.innerHeight;
+
+function nodeLabel(n){
+  if(n.type==='tag') return L(TAG_LABEL[n.tagKey]);
+  if(n.type==='question') return L(DB[n.id].title);
+  return n.title;
+}
+function nodeSize(n){
+  if(expandedNodeIds.indexOf(n.id)!==-1){
+    var isDrum = (n.type==='project'||n.type==='research') && n.images && n.images.length>0;
+    var ew = Math.max(360, Math.min(isDrum?720:640, W-56));
+    var eh = Math.max(420, Math.min(isDrum?640:580, H-120));
+    return {w:ew, h:eh};
+  }
+  if(n.type==='seed') return {w:560,h:90};
+  if(n.type==='main') return {w:220,h:70};
+  if(n.type==='tag'){ var lbl=nodeLabel(n); return {w:Math.max(70, lbl.length*tagFontSize(n.tagKey)*0.62), h:tagFontSize(n.tagKey)+20}; }
+  if(n.type==='project'||n.type==='research') return {w:230,h:76};
+  if(n.type==='question') return {w:280,h:90};
+  return {w:150,h:50};
+}
+
+var simulation = d3.forceSimulation([])
+  .force('link', d3.forceLink([]).id(function(d){return d.id;}).distance(function(l){
+    var a=l.source,b=l.target,at=a.type||(DB[a]&&DB[a].type),bt=b.type||(DB[b]&&DB[b].type);
+    if(at==='seed'||bt==='seed') return 210;
+    if(at==='tag'||bt==='tag') return 110;
+    return 130;
+  }).strength(0.5))
+  .force('charge', d3.forceManyBody().strength(-260))
+  .force('collide', d3.forceCollide().radius(function(d){ var s=nodeSize(d); return Math.max(s.w,s.h)/2+14; }))
+  .force('x', d3.forceX(function(){return W/2;}).strength(0.02))
+  .force('y', d3.forceY(function(){return H/2;}).strength(0.02))
+  .on('tick', ticked);
+
+function ticked(){
+  linksLayer.selectAll('path.link').attr('d', function(d){ return 'M'+d.source.x+','+d.source.y+'L'+d.target.x+','+d.target.y; });
+  nodesLayer.selectAll('foreignObject.node-fo')
+    .attr('x', function(d){ return d.x - nodeSize(d).w/2; })
+    .attr('y', function(d){ return d.y - nodeSize(d).h/2; });
+}
+
+var dragBehavior = d3.drag()
+  .clickDistance(6)
+  .on('start', function(event,d){
+    if(event.sourceEvent) event.sourceEvent.stopPropagation();
+    if(!event.active) simulation.alphaTarget(0.25).restart();
+    d.fx=d.x; d.fy=d.y;
+  })
+  .on('drag', function(event,d){ d.fx=event.x; d.fy=event.y; })
+  .on('end', function(event,d){ if(!event.active) simulation.alphaTarget(0); });
+
+function nodeContentHTML(d){
+  if(d.type==='project'||d.type==='research'){
+    return '<span class="n-title">'+d.title+'</span><span class="n-meta">'+L(d.kind)+'</span>';
+  }
+  if(d.type==='tag') return L(TAG_LABEL[d.tagKey]);
+  if(d.type==='question') return L(DB[d.id].title);
+  return d.title;
+}
+
+function relatedOf(n){
+  if(n.type==='question'){ return (n.leads||[]).map(function(id){return DB[id];}).filter(Boolean); }
+  var shared = Object.keys(DB).filter(function(id){
+    var o=DB[id];
+    return id!==n.id && LEAF_TYPES[o.type] && (o.tags||[]).some(function(t){return (n.tags||[]).indexOf(t)!==-1;});
+  }).map(function(id){return DB[id];}).slice(0,4);
+  var questions = Object.keys(DB).filter(function(id){
+    var q=DB[id]; return q.type==='question' && (q.leads||[]).indexOf(n.id)!==-1;
+  }).map(function(id){return DB[id];});
+  return questions.concat(shared);
+}
+
+/* ---------- Expanded card builders ---------- */
+function buildExpandedHTML(d){
+  var kicker = d.type==='project' ? 'THAT!' : 'THINK';
+  var html = '<div class="expanded-card">';
+  html += '<button class="expanded-close brand-hover" data-close="1">×</button>';
+  html += '<div class="expanded-kicker">'+kicker+'</div>';
+  html += '<div class="expanded-title">'+d.title+'</div>';
+  html += '<div class="expanded-meta"><span>'+L(d.kind)+'</span><span>'+L(d.meta)+'</span></div>';
+  html += '<p class="expanded-body">'+L(d.body)+'</p>';
+  var related = relatedOf(d);
+  if(related.length){
+    html += '<div class="expanded-annotations expanded-annotations--single">';
+    html += '<div class="ann-block"><div class="ann-label">'+L(UI.related)+'</div><div class="expanded-related">'+
+      related.map(function(r){
+        var isQ = r.type==='question';
+        return '<button class="brand-hover ann-rel" data-id="'+r.id+'" data-qtype="'+(isQ?'1':'0')+'"'+(isQ?' style="font-family:var(--font-display);font-style:italic;text-transform:lowercase;"':'')+'>'+(isQ?L(r.title):r.title)+' →</button>';
+      }).join('') +'</div></div>';
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function buildExpandedNextHTML(){
+  var html = '<div class="expanded-card next-card">';
+  html += '<button class="expanded-close brand-hover" data-close="1">×</button>';
+  html += '<div class="expanded-kicker">NEXT</div>';
+  html += '<div class="expanded-title q-style">'+L(UI.inviteLine)+'</div>';
+  html += '<p class="expanded-body" style="margin-top:14px;">'+L(UI.practiceDesc)+'</p>';
+  html += '<div class="next-grid-mini">';
+  html += '<div class="ncol"><div class="ann-label">'+L(UI.contact)+'</div><a class="brand-hover contact-email" href="mailto:studio@namethat.studio">studio@namethat.studio</a><p>'+L(UI.contactNote)+'</p></div>';
+  html += '<div class="ncol"><div class="ann-label">'+L(UI.founder)+'</div><p style="font-weight:500;font-size:13.5px;">'+L(UI.founderName)+'</p><p style="margin-bottom:4px;">'+L(UI.founderRole)+'</p><p>'+L(UI.founderBio)+'</p></div>';
+  html += '<div class="ncol"><div class="ann-label">'+L(UI.availability)+'</div><p>'+L(UI.availabilityText)+'</p></div>';
+  html += '<div class="ncol"><div class="ann-label">'+L(UI.elsewhere)+'</div><div class="social-list"><a class="brand-hover" href="#" target="_blank" rel="noopener">Instagram</a><a class="brand-hover" href="#" target="_blank" rel="noopener">LinkedIn</a><a class="brand-hover" href="#" target="_blank" rel="noopener">Are.na</a></div></div>';
+  html += '</div></div>';
+  return html;
+}
+
+/* ---------- Drum: frameless, isometric, all cards visible, text co-rotates
+   and stay readable from whichever side currently faces the viewer (double-sided faces).
+   Used for THAT! projects and — now — THINK entries that carry images. ---------- */
+function drumLabelHTML(content){
+  return '<div class="lbl-face lbl-front"><div class="lbl-inner">'+content+'</div></div>'
+       + '<div class="lbl-face lbl-back"><div class="lbl-inner">'+content+'</div></div>';
+}
+function buildExpandedDrumHTML(d){
+  var kicker = d.type==='project' ? 'THAT!' : 'THINK';
+  var n = d.images.length;
+  var R = 150, R2 = 235;
+  var html = '<div class="drum-comp">';
+  html += '<button class="expanded-close brand-hover" data-close="1">×</button>';
+  html += '<div class="drum-kicker">'+kicker+'</div>';
+  html += '<div class="drum-scene"><div class="drum-tilt"><div class="drum-ring3d" id="ring3d-'+d.id+'">';
+
+  d.images.forEach(function(img,i){
+    var ang = i*(360/n);
+    html += '<div class="drum-card3d" style="transform:rotateY('+ang+'deg) translateZ('+R+'px);">'+img+'</div>';
+  });
+
+  var related = relatedOf(d);
+  var labels = [
+    '<strong>'+d.title+'</strong>'+L(d.meta)+' · '+L(d.kind),
+    L(d.body),
+    related.length ? (L(UI.related)+'<br>'+related.map(function(r){
+        var isQ = r.type==='question';
+        return '<button class="brand-hover ann-related-btn" data-id="'+r.id+'" data-qtype="'+(isQ?'1':'0')+'"'+(isQ?' style="font-family:var(--font-display);font-style:italic;text-transform:lowercase;"':'')+'>'+(isQ?L(r.title):r.title)+' →</button>';
+      }).join('')) : ''
+  ];
+  for(var i=0;i<n;i++){
+    var ang2 = i*(360/n) + (360/n)/2;
+    var content = labels[i] || '';
+    if(!content) continue;
+    html += '<div class="drum-label3d" style="transform:rotateY('+ang2+'deg) translateZ('+R2+'px);">'+drumLabelHTML(content)+'</div>';
+  }
+
+  html += '</div></div></div></div>';
+  return html;
+}
+
+function wireExpandedCard(wrapEl, d){
+  var closeBtn = wrapEl.querySelector('[data-close]');
+  if(closeBtn) closeBtn.addEventListener('click', function(){ toggleExpand(d.id); });
+  wrapEl.querySelectorAll('.ann-rel').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-id');
+      if(btn.getAttribute('data-qtype')==='1'){ activateQuestionLeads(id); }
+      else { toggleExpand(id); }
+    });
+  });
+}
+
+function wireExpandedProjectCard(wrapEl, d){
+  var closeBtn = wrapEl.querySelector('[data-close]');
+  if(closeBtn) closeBtn.addEventListener('click', function(){ toggleExpand(d.id); });
+
+  wrapEl.querySelectorAll('.ann-related-btn').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var id = btn.getAttribute('data-id');
+      if(btn.getAttribute('data-qtype')==='1'){ activateQuestionLeads(id); }
+      else { toggleExpand(id); }
+    });
+  });
+
+  var ring = wrapEl.querySelector('#ring3d-'+d.id);
+  var scene = wrapEl.querySelector('.drum-scene');
+  if(!ring || !scene) return;
+  if(d._angle===undefined) d._angle = 0;
+  function apply(){ ring.style.transform = 'rotateY('+d._angle+'deg)'; }
+  apply();
+
+  var dragging = false;
+  scene.addEventListener('mousedown', function(e){
+    if(e.target.closest('button, a')) return;
+    e.stopPropagation();
+    dragging = true;
+    var downTarget = e.target;
+    var startX = e.clientX, startAngle = d._angle, moved = false;
+    function onMove(ev){
+      var dx = ev.clientX-startX;
+      if(Math.abs(dx) > 4) moved = true;
+      d._angle = startAngle + dx*0.4; apply();
+    }
+    function onUp(){
+      dragging = false;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      if(!moved && !downTarget.closest('.drum-card3d, .drum-label3d')){ toggleExpand(d.id); }
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  });
+  scene.addEventListener('touchstart', function(e){
+    if(e.target.closest('button, a')) return;
+    e.stopPropagation();
+    dragging = true;
+    var downTarget = e.target;
+    var startX = e.touches[0].clientX, startAngle = d._angle, moved = false;
+    function onMove(ev){
+      var dx = ev.touches[0].clientX-startX;
+      if(Math.abs(dx) > 4) moved = true;
+      d._angle = startAngle + dx*0.4; apply();
+    }
+    function onEnd(){
+      dragging = false;
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onEnd);
+      if(!moved && !downTarget.closest('.drum-card3d, .drum-label3d')){ toggleExpand(d.id); }
+    }
+    window.addEventListener('touchmove', onMove);
+    window.addEventListener('touchend', onEnd);
+  }, {passive:true});
+
+  var myToken = {};
+  d._animToken = myToken;
+  function tick(){
+    if(d._animToken !== myToken) return;
+    if(!dragging && expandedNodeIds.indexOf(d.id)!==-1){ d._angle += 0.045; apply(); }
+    if(expandedNodeIds.indexOf(d.id)!==-1 && d._animToken===myToken){ requestAnimationFrame(tick); }
+  }
+  requestAnimationFrame(tick);
+}
+
+function renderNodeContent(foNode, d){
+  var wrap = foNode.querySelector('.node-wrap');
+  var expanded = expandedNodeIds.indexOf(d.id) !== -1;
+  var isDrum = (d.type==='project'||d.type==='research') && d.images && d.images.length>0;
+  if(expanded && isDrum){
+    wrap.className = 'node-wrap';
+    wrap.innerHTML = buildExpandedDrumHTML(d);
+    wireExpandedProjectCard(wrap, d);
+  } else if(expanded && (d.type==='project'||d.type==='research')){
+    wrap.className = 'node-wrap';
+    wrap.innerHTML = buildExpandedHTML(d);
+    wireExpandedCard(wrap, d);
+  } else if(expanded && d.type==='main' && d.id==='next'){
+    wrap.className = 'node-wrap';
+    wrap.innerHTML = buildExpandedNextHTML();
+    wireExpandedCard(wrap, d);
+  } else {
+    wrap.className = 'node-wrap'+((d.type==='project'||d.type==='research')?' align-left':'');
+    var extra = (d.type==='question'||d.type==='main')?'':' brand-hover';
+    wrap.innerHTML = '<button class="n-btn node-item'+extra+'"></button>';
+    var btn = wrap.querySelector('.n-btn');
+    btn.innerHTML = nodeContentHTML(d);
+    btn.addEventListener('click', function(){ handleNodeClick(d); });
+  }
+}
+
+function foClass(d){ return 'node-fo n-'+d.type; }
+
+function render(){
+  simulation.nodes(activeNodes);
+  simulation.force('link').links(activeLinks);
+
+  var linkSel = linksLayer.selectAll('path.link').data(activeLinks, function(d){
+    var s=d.source.id||d.source, t=d.target.id||d.target; return s+'__'+t;
+  });
+  linkSel.exit().remove();
+  linkSel.enter().append('path').attr('class','link');
+
+  var nodeSel = nodesLayer.selectAll('foreignObject.node-fo').data(activeNodes, function(d){ return d.id; });
+  nodeSel.exit().remove();
+
+  var enter = nodeSel.enter().append('foreignObject').attr('class', foClass).call(dragBehavior);
+  enter.append('xhtml:div').attr('class','node-wrap');
+
+  var merged = enter.merge(nodeSel);
+  merged.attr('class', foClass)
+    .attr('width', function(d){ return nodeSize(d).w; })
+    .attr('height', function(d){ return nodeSize(d).h; });
+  merged.each(function(d){ renderNodeContent(this, d); });
+
+  expandedNodeIds.forEach(function(id){
+    nodesLayer.selectAll('foreignObject.node-fo').filter(function(dd){ return dd.id===id; }).raise();
+  });
+
+  simulation.alpha(0.7).restart();
+  document.getElementById('hint').classList.toggle('gone', activeNodes.length > 1);
+}
+
+var zoom = d3.zoom().scaleExtent([0.35,2.2]).on('zoom', function(event){ viewport.attr('transform', event.transform); });
+svg.call(zoom);
+svg.on('mousedown.cursor', function(){ svg.classed('dragging', true); });
+window.addEventListener('mouseup', function(){ svg.classed('dragging', false); });
+
+window.addEventListener('resize', function(){ W=window.innerWidth; H=window.innerHeight; simulation.alpha(0.3).restart(); });
+
+document.getElementById('resetMap').addEventListener('click', function(){
+  activeNodes=[]; activeLinks=[]; nodeById={}; expandedNodeIds=[];
+  var seed = ensureNode('seed', null);
+  seed.x=W/2; seed.y=H/2; seed.fx=null; seed.fy=null;
+  render();
+  svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
+});
+document.getElementById('logo').addEventListener('click', function(){ document.getElementById('resetMap').click(); });
+
+/* ============================================================
+   LANGUAGE TOGGLE
+   ============================================================ */
+var langBtn = document.getElementById('langToggle');
+function updateLanguage(){
+  nodesLayer.selectAll('foreignObject.node-fo').each(function(d){ renderNodeContent(this, d); });
+  document.getElementById('hint').textContent = L(UI.hint);
+  document.getElementById('resetMap').textContent = L(UI.resetMap);
+  langBtn.textContent = currentLang==='en' ? 'RU' : 'EN';
+}
+langBtn.addEventListener('click', function(){
+  currentLang = currentLang==='en' ? 'ru' : 'en';
+  updateLanguage();
+});
+updateLanguage();
+
+/* ============================================================
+   Preloader + logo idle mark — plain ASCII everywhere, single
+   consistent italic rendering, no jitter (stable hit-boxes)
+   ============================================================ */
+var FULL_MARK = "name that!";
+var SHORT_MARK = "nt!";
+function buildFrames(full, cutoffLen, forced){
+  var frames=[];
+  for(var i=full.length;i>cutoffLen;i--){ frames.push(full.slice(0,i)); }
+  frames.push(forced);
+  return frames;
+}
+function playFrames(el, frames, speed, onDone){
+  var token={}; el._playToken=token; var i=0;
+  function step(){
+    if(el._playToken!==token) return;
+    if(i<frames.length){ el.textContent=frames[i]; i++; setTimeout(step,speed); }
+    else if(onDone){ onDone(); }
+  }
+  step();
+}
+var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+(function(){
+  var overlayEl=document.getElementById('preloader');
+  var mark=document.getElementById('preloader-mark');
+  function finish(){ overlayEl.classList.add('hide'); setTimeout(function(){ overlayEl.style.display='none'; },650); }
+  if(reduceMotion){ mark.textContent=SHORT_MARK; setTimeout(finish,300); return; }
+  mark.textContent=FULL_MARK;
+  var collapseFrames = buildFrames(FULL_MARK,1,SHORT_MARK);
+  setTimeout(function(){ playFrames(mark, collapseFrames, 45, function(){ setTimeout(finish,350); }); }, 500);
+})();
+
+(function(){
+  var el = document.getElementById('logo');
+  var expandFrames = buildFrames(FULL_MARK,1,SHORT_MARK).slice().reverse();
+  var collapseFrames = buildFrames(FULL_MARK,1,SHORT_MARK);
+  el.textContent = SHORT_MARK;
+  if(reduceMotion) return;
+  el.addEventListener('mouseenter', function(){ playFrames(el, expandFrames, 42); });
+  el.addEventListener('focus', function(){ playFrames(el, expandFrames, 42); });
+  el.addEventListener('mouseleave', function(){ playFrames(el, collapseFrames, 42); });
+  el.addEventListener('blur', function(){ playFrames(el, collapseFrames, 42); });
+})();
+
+function wireSeedHover(){
+  var wrap = document.querySelector('.n-seed .node-wrap');
+  var btn = document.querySelector('.n-seed .n-btn');
+  if(!wrap || !btn || wrap._wired) return;
+  wrap._wired = true;
+  var FULL_HERO = "name what’s next.";
+  var collapseFrames = buildFrames(FULL_HERO,1,'nt');
+  var expandFrames = buildFrames(FULL_HERO,1,'nt').slice().reverse();
+  if(reduceMotion) return;
+  wrap.addEventListener('mouseenter', function(){ playFrames(btn, collapseFrames, 24); });
+  wrap.addEventListener('mouseleave', function(){ playFrames(btn, expandFrames, 24); });
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+var seed = ensureNode('seed', null);
+seed.x = W/2; seed.y = H/2;
+render();
+wireSeedHover();
+</script>
+
+</body>
+</html>
