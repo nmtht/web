@@ -45,7 +45,7 @@
   .logo{font-family:var(--font-display);font-style:italic;font-size:23px;font-weight:400;letter-spacing:0.01em;width:175px;white-space:nowrap;overflow:visible;text-align:left;}
   #resetMap{font-size:12px;letter-spacing:0.06em;}
 
-  #langToggle{position:fixed;right:var(--gutter);bottom:24px;z-index:60;font-size:12px;letter-spacing:0.06em;padding:8px 13px;border:1px solid var(--grey-light);background:var(--white);}
+  #langToggle{position:fixed;right:var(--gutter);bottom:24px;z-index:60;font-size:12px;letter-spacing:0.06em;}
 
   /* ---------- Graph canvas ---------- */
   #stage{position:fixed;inset:0;z-index:1;}
@@ -108,14 +108,16 @@
   .drum-comp{position:relative;width:100%;height:100%;background:transparent;cursor:default;}
   .drum-comp .expanded-close{z-index:5;}
   .drum-kicker{position:absolute;top:16px;left:20px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;z-index:4;}
-  .drum-scene{position:absolute;inset:0;perspective:1500px;}
-  .drum-tilt{width:100%;height:100%;position:relative;transform-style:preserve-3d;transform:rotateX(54deg);}
-  .drum-ring3d{width:100%;height:100%;position:absolute;top:0;left:0;transform-style:preserve-3d;}
-  .drum-card3d{position:absolute;top:50%;left:50%;width:132px;height:90px;margin:-45px 0 0 -66px;transform-style:preserve-3d;backface-visibility:hidden;}
+  .drum-scene{position:absolute;inset:0;-webkit-perspective:1500px;perspective:1500px;}
+  .drum-tilt{width:100%;height:100%;position:relative;-webkit-transform-style:preserve-3d;transform-style:preserve-3d;-webkit-transform:rotateX(54deg);transform:rotateX(54deg);}
+  .drum-ring3d{width:100%;height:100%;position:absolute;top:0;left:0;-webkit-transform-style:preserve-3d;transform-style:preserve-3d;}
+  .drum-card3d{position:absolute;top:50%;left:50%;width:132px;height:90px;margin:-45px 0 0 -66px;-webkit-transform-style:preserve-3d;transform-style:preserve-3d;}
+  .drum-card3d .card-face{position:absolute;top:0;left:0;width:100%;height:100%;-webkit-backface-visibility:hidden;backface-visibility:hidden;}
+  .drum-card3d .card-back{-webkit-transform:rotateY(180deg);transform:rotateY(180deg);}
   .drum-card3d svg{width:100%;height:100%;display:block;box-shadow:0 0 0 1px rgba(17,17,16,.18);background:#fff;}
-  .drum-label3d{position:absolute;top:50%;left:50%;width:170px;margin:-46px 0 0 -85px;transform-style:preserve-3d;text-align:center;}
-  .drum-label3d .lbl-face{position:absolute;top:0;left:0;width:100%;backface-visibility:hidden;}
-  .drum-label3d .lbl-back{transform:rotateY(180deg);}
+  .drum-label3d{position:absolute;top:50%;left:50%;width:170px;margin:-46px 0 0 -85px;-webkit-transform-style:preserve-3d;transform-style:preserve-3d;text-align:center;}
+  .drum-label3d .lbl-face{position:absolute;top:0;left:0;width:100%;-webkit-backface-visibility:hidden;backface-visibility:hidden;}
+  .drum-label3d .lbl-back{-webkit-transform:rotateY(180deg);transform:rotateY(180deg);}
   .drum-label3d .lbl-inner{font-size:10.5px;line-height:1.45;}
   .drum-label3d .lbl-inner strong{display:block;font-weight:500;font-size:12.5px;margin-bottom:3px;}
   .drum-label3d .lbl-inner .ann-related-btn{display:block;font-size:10.5px;margin-top:3px;}
@@ -156,8 +158,7 @@ var UI = {
   related:{en:'Related', ru:'Связанное'},
   leadsTo:{en:'Leads to', ru:'Ведёт к'},
   practice:{en:'Practice', ru:'Практика'},
-  founder:{en:'Founder', ru:'Основатель'},
-  availability:{en:'Availability', ru:'Доступность'},
+  founder:{en:'Author', ru:'Автор'},
   elsewhere:{en:'Elsewhere', ru:'Также'},
   contact:{en:'Contact', ru:'Контакт'},
   inviteLine:{en:"have a territory. have a question. have an idea.", ru:"есть территория. есть вопрос. есть идея."},
@@ -165,11 +166,9 @@ var UI = {
   practiceDesc:{en:"name that! is an independent spatial practice working across architecture, urbanism, landscape and research. We take on masterplans, competitions and territorial strategy alongside self-initiated work that has no client at all.",
     ru:"name that! — независимая пространственная практика на пересечении архитектуры, урбанизма, ландшафта и исследований. Мы занимаемся мастер-планами, конкурсами и территориальными стратегиями, а также инициативными проектами без заказчика."},
   founderName:{en:'Ilya Sorokin', ru:'Илья Сорокин'},
-  founderRole:{en:'Architect / Founder', ru:'Архитектор / Основатель'},
+  founderRole:{en:'Architect / Author', ru:'Архитектор / Автор'},
   founderBio:{en:"Trained in Moscow and Rotterdam, working internationally since 2021. Moves between built projects and research without treating either as the side work.",
-    ru:"Учился в Москве и Роттердаме, работает международно с 2021 года. Совмещает построенные проекты и исследования, не считая ни одно из них второстепенным."},
-  availabilityText:{en:"Based between Moscow and Rotterdam.<br>Working internationally.<br>Open to new territories, 2026–27.",
-    ru:"Между Москвой и Роттердамом.<br>Работаем международно.<br>Открыты к новым территориям, 2026–27."}
+    ru:"Учился в Москве и Роттердаме, работает международно с 2021 года. Совмещает построенные проекты и исследования, не считая ни одно из них второстепенным."}
 };
 
 var TAG_LABEL = {
@@ -209,10 +208,10 @@ var SVGART = {
 
 var DB = {};
 [
-  {id:'seed',type:'seed',title:"name what’s next."},
-  {id:'that',type:'main',title:'THAT!'},
-  {id:'think',type:'main',title:'THINK'},
-  {id:'next',type:'main',title:'NEXT'},
+  {id:'seed',type:'seed',title:{en:"name what’s next.",ru:"назови то, что дальше."}},
+  {id:'that',type:'main',title:{en:'THAT!',ru:'то!'}},
+  {id:'think',type:'main',title:{en:'THINK',ru:'думать'}},
+  {id:'next',type:'main',title:{en:'NEXT',ru:'далее'}},
 
   {id:'p1',type:'project',title:'Gorky Edge',
     meta:{en:'Moscow, RU / 2025',ru:'Москва, РФ / 2025'},
@@ -439,7 +438,7 @@ function nodeLabel(n){
 }
 function nodeSize(n){
   if(expandedNodeIds.indexOf(n.id)!==-1){
-    var isDrum = (n.type==='project'||n.type==='research') && n.images && n.images.length>0;
+    var isDrum = ((n.type==='project'||n.type==='research') && n.images && n.images.length>0) || (n.type==='main' && n.id==='next');
     var ew = Math.max(360, Math.min(isDrum?720:640, W-56));
     var eh = Math.max(420, Math.min(isDrum?640:580, H-120));
     return {w:ew, h:eh};
@@ -465,7 +464,38 @@ var simulation = d3.forceSimulation([])
   .force('y', d3.forceY(function(){return H/2;}).strength(0.02))
   .on('tick', ticked);
 
+// Gentle chaotic wandering — applies to every node that isn't currently being
+// dragged by the user and isn't the one open drum (which has its own life via rotation).
+var wanderInterval = null;
+function shouldWander(d){
+  if(d.fx !== null && d.fx !== undefined) return false;
+  if(expandedNodeIds.indexOf(d.id)!==-1) return false;
+  return true;
+}
+
+function startWandering(){
+  if(wanderInterval) clearInterval(wanderInterval);
+  wanderInterval = setInterval(function(){
+    activeNodes.forEach(function(d){
+      if(shouldWander(d)){
+        d._wanderTargetX = (Math.random()-0.5)*700 + W/2;
+        d._wanderTargetY = (Math.random()-0.5)*460 + H/2;
+      }
+    });
+  }, 4000);
+}
+
 function ticked(){
+  // Apply the slow chaotic drift toward each node's wander target
+  activeNodes.forEach(function(d){
+    if(shouldWander(d) && d._wanderTargetX !== undefined){
+      var wx = (d._wanderTargetX - d.x) * 0.006;
+      var wy = (d._wanderTargetY - d.y) * 0.006;
+      d.x += wx;
+      d.y += wy;
+    }
+  });
+
   linksLayer.selectAll('path.link').attr('d', function(d){ return 'M'+d.source.x+','+d.source.y+'L'+d.target.x+','+d.target.y; });
   nodesLayer.selectAll('foreignObject.node-fo')
     .attr('x', function(d){ return d.x - nodeSize(d).w/2; })
@@ -488,7 +518,7 @@ function nodeContentHTML(d){
   }
   if(d.type==='tag') return L(TAG_LABEL[d.tagKey]);
   if(d.type==='question') return L(DB[d.id].title);
-  return d.title;
+  return L(d.title);
 }
 
 function relatedOf(n){
@@ -526,40 +556,50 @@ function buildExpandedHTML(d){
   return html;
 }
 
-function buildExpandedNextHTML(){
-  var html = '<div class="expanded-card next-card">';
+function buildExpandedNextDrumHTML(d){
+  var R2 = 210;
+  var html = '<div class="drum-comp">';
   html += '<button class="expanded-close brand-hover" data-close="1">×</button>';
-  html += '<div class="expanded-kicker">NEXT</div>';
-  html += '<div class="expanded-title q-style">'+L(UI.inviteLine)+'</div>';
-  html += '<p class="expanded-body" style="margin-top:14px;">'+L(UI.practiceDesc)+'</p>';
-  html += '<div class="next-grid-mini">';
-  html += '<div class="ncol"><div class="ann-label">'+L(UI.contact)+'</div><a class="brand-hover contact-email" href="mailto:studio@namethat.studio">studio@namethat.studio</a><p>'+L(UI.contactNote)+'</p></div>';
-  html += '<div class="ncol"><div class="ann-label">'+L(UI.founder)+'</div><p style="font-weight:500;font-size:13.5px;">'+L(UI.founderName)+'</p><p style="margin-bottom:4px;">'+L(UI.founderRole)+'</p><p>'+L(UI.founderBio)+'</p></div>';
-  html += '<div class="ncol"><div class="ann-label">'+L(UI.availability)+'</div><p>'+L(UI.availabilityText)+'</p></div>';
-  html += '<div class="ncol"><div class="ann-label">'+L(UI.elsewhere)+'</div><div class="social-list"><a class="brand-hover" href="#" target="_blank" rel="noopener">Instagram</a><a class="brand-hover" href="#" target="_blank" rel="noopener">LinkedIn</a><a class="brand-hover" href="#" target="_blank" rel="noopener">Are.na</a></div></div>';
-  html += '</div></div>';
+  html += '<div class="drum-scene"><div class="drum-tilt"><div class="drum-ring3d" id="ring3d-'+d.id+'">';
+
+  var labels = [
+    '<span style="font-family:var(--font-display);font-style:italic;">'+L(UI.inviteLine)+'</span><br>'+L(UI.practiceDesc),
+    '<strong>'+L(UI.founderName)+'</strong>'+L(UI.founderRole)+'<br>'+L(UI.founderBio),
+    L(UI.contact)+'<br><a class="brand-hover contact-email" href="mailto:studio@namethat.studio">studio@namethat.studio</a><br>'+L(UI.contactNote)+
+      '<br><a class="brand-hover" href="#" target="_blank" rel="noopener">Instagram</a>'+
+      '<br><a class="brand-hover" href="#" target="_blank" rel="noopener">LinkedIn</a>'+
+      '<br><a class="brand-hover" href="#" target="_blank" rel="noopener">Are.na</a>'
+  ];
+  var labelAngles = [60, 180, 300];
+  labels.forEach(function(content, i){
+    html += '<div class="drum-label3d" style="transform:rotateY('+labelAngles[i]+'deg) translateZ('+R2+'px);">'+drumLabelHTML(content)+'</div>';
+  });
+
+  html += '</div></div></div></div>';
   return html;
 }
 
 /* ---------- Drum: frameless, isometric, all cards visible, text co-rotates
    and stay readable from whichever side currently faces the viewer (double-sided faces).
    Used for THAT! projects and — now — THINK entries that carry images. ---------- */
+function drumCardHTML(img){
+  return '<div class="card-face card-front">'+img+'</div>'
+       + '<div class="card-face card-back">'+img+'</div>';
+}
 function drumLabelHTML(content){
   return '<div class="lbl-face lbl-front"><div class="lbl-inner">'+content+'</div></div>'
        + '<div class="lbl-face lbl-back"><div class="lbl-inner">'+content+'</div></div>';
 }
 function buildExpandedDrumHTML(d){
-  var kicker = d.type==='project' ? 'THAT!' : 'THINK';
   var n = d.images.length;
   var R = 150, R2 = 235;
   var html = '<div class="drum-comp">';
   html += '<button class="expanded-close brand-hover" data-close="1">×</button>';
-  html += '<div class="drum-kicker">'+kicker+'</div>';
   html += '<div class="drum-scene"><div class="drum-tilt"><div class="drum-ring3d" id="ring3d-'+d.id+'">';
 
   d.images.forEach(function(img,i){
     var ang = i*(360/n);
-    html += '<div class="drum-card3d" style="transform:rotateY('+ang+'deg) translateZ('+R+'px);">'+img+'</div>';
+    html += '<div class="drum-card3d" style="transform:rotateY('+ang+'deg) translateZ('+R+'px);">'+drumCardHTML(img)+'</div>';
   });
 
   var related = relatedOf(d);
@@ -571,12 +611,11 @@ function buildExpandedDrumHTML(d){
         return '<button class="brand-hover ann-related-btn" data-id="'+r.id+'" data-qtype="'+(isQ?'1':'0')+'"'+(isQ?' style="font-family:var(--font-display);font-style:italic;text-transform:lowercase;"':'')+'>'+(isQ?L(r.title):r.title)+' →</button>';
       }).join('')) : ''
   ];
-  for(var i=0;i<n;i++){
-    var ang2 = i*(360/n) + (360/n)/2;
-    var content = labels[i] || '';
-    if(!content) continue;
-    html += '<div class="drum-label3d" style="transform:rotateY('+ang2+'deg) translateZ('+R2+'px);">'+drumLabelHTML(content)+'</div>';
-  }
+  var labelAngles = [60, 180, 300];
+  labels.forEach(function(content, i){
+    if(!content) return;
+    html += '<div class="drum-label3d" style="transform:rotateY('+labelAngles[i]+'deg) translateZ('+R2+'px);">'+drumLabelHTML(content)+'</div>';
+  });
 
   html += '</div></div></div></div>';
   return html;
@@ -669,18 +708,19 @@ function wireExpandedProjectCard(wrapEl, d){
 function renderNodeContent(foNode, d){
   var wrap = foNode.querySelector('.node-wrap');
   var expanded = expandedNodeIds.indexOf(d.id) !== -1;
-  var isDrum = (d.type==='project'||d.type==='research') && d.images && d.images.length>0;
-  if(expanded && isDrum){
+  var isImageDrum = (d.type==='project'||d.type==='research') && d.images && d.images.length>0;
+  var isNextDrum = d.type==='main' && d.id==='next';
+  if(expanded && isImageDrum){
     wrap.className = 'node-wrap';
     wrap.innerHTML = buildExpandedDrumHTML(d);
+    wireExpandedProjectCard(wrap, d);
+  } else if(expanded && isNextDrum){
+    wrap.className = 'node-wrap';
+    wrap.innerHTML = buildExpandedNextDrumHTML(d);
     wireExpandedProjectCard(wrap, d);
   } else if(expanded && (d.type==='project'||d.type==='research')){
     wrap.className = 'node-wrap';
     wrap.innerHTML = buildExpandedHTML(d);
-    wireExpandedCard(wrap, d);
-  } else if(expanded && d.type==='main' && d.id==='next'){
-    wrap.className = 'node-wrap';
-    wrap.innerHTML = buildExpandedNextHTML();
     wireExpandedCard(wrap, d);
   } else {
     wrap.className = 'node-wrap'+((d.type==='project'||d.type==='research')?' align-left':'');
@@ -737,8 +777,8 @@ document.getElementById('resetMap').addEventListener('click', function(){
   seed.x=W/2; seed.y=H/2; seed.fx=null; seed.fy=null;
   render();
   svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
+  if(window._resetLogoPosition) window._resetLogoPosition();
 });
-document.getElementById('logo').addEventListener('click', function(){ document.getElementById('resetMap').click(); });
 
 /* ============================================================
    LANGUAGE TOGGLE
@@ -801,17 +841,67 @@ var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   el.addEventListener('blur', function(){ playFrames(el, collapseFrames, 42); });
 })();
 
+/* ---------- Logo: a draggable field element too. A plain click (no real
+   drag) resets the whole map and snaps the logo back to its corner. ---------- */
+(function(){
+  var el = document.getElementById('logo');
+  var offsetX = 0, offsetY = 0;
+  el.style.transition = 'transform .35s cubic-bezier(.2,.8,.2,1)';
+
+  window._resetLogoPosition = function(){
+    offsetX = 0; offsetY = 0;
+    el.style.transition = 'transform .35s cubic-bezier(.2,.8,.2,1)';
+    el.style.transform = 'translate(0px,0px)';
+  };
+
+  function startDrag(downX, downY, moveEvent, endEvent, getXY){
+    var startOffsetX = offsetX, startOffsetY = offsetY, moved = false;
+    el.style.transition = 'none';
+    function onMove(ev){
+      var xy = getXY(ev);
+      var dx = xy.x - downX, dy = xy.y - downY;
+      if(Math.abs(dx) > 5 || Math.abs(dy) > 5) moved = true;
+      offsetX = startOffsetX + dx;
+      offsetY = startOffsetY + dy;
+      el.style.transform = 'translate('+offsetX+'px,'+offsetY+'px)';
+    }
+    function onEnd(){
+      window.removeEventListener(moveEvent, onMove);
+      window.removeEventListener(endEvent, onEnd);
+      el.style.transition = 'transform .3s ease';
+      if(!moved){ document.getElementById('resetMap').click(); }
+    }
+    window.addEventListener(moveEvent, onMove);
+    window.addEventListener(endEvent, onEnd);
+  }
+
+  el.addEventListener('mousedown', function(e){
+    e.preventDefault();
+    startDrag(e.clientX, e.clientY, 'mousemove', 'mouseup', function(ev){ return {x:ev.clientX, y:ev.clientY}; });
+  });
+  el.addEventListener('touchstart', function(e){
+    var t = e.touches[0];
+    startDrag(t.clientX, t.clientY, 'touchmove', 'touchend', function(ev){ var tt=ev.touches[0]||ev.changedTouches[0]; return {x:tt.clientX, y:tt.clientY}; });
+  }, {passive:true});
+})();
+
 function wireSeedHover(){
   var wrap = document.querySelector('.n-seed .node-wrap');
-  var btn = document.querySelector('.n-seed .n-btn');
-  if(!wrap || !btn || wrap._wired) return;
+  if(!wrap || wrap._wired) return;
   wrap._wired = true;
-  var FULL_HERO = "name what’s next.";
-  var collapseFrames = buildFrames(FULL_HERO,1,'nt');
-  var expandFrames = buildFrames(FULL_HERO,1,'nt').slice().reverse();
-  if(reduceMotion) return;
-  wrap.addEventListener('mouseenter', function(){ playFrames(btn, collapseFrames, 24); });
-  wrap.addEventListener('mouseleave', function(){ playFrames(btn, expandFrames, 24); });
+  var FULL_HERO_EN = DB.seed.title.en;
+  var collapseFrames = buildFrames(FULL_HERO_EN,1,'nt');
+  var expandFrames = buildFrames(FULL_HERO_EN,1,'nt').slice().reverse();
+  wrap.addEventListener('mouseenter', function(){
+    if(reduceMotion || currentLang!=='en') return;
+    var btn = wrap.querySelector('.n-btn');
+    if(btn) playFrames(btn, collapseFrames, 24);
+  });
+  wrap.addEventListener('mouseleave', function(){
+    if(reduceMotion || currentLang!=='en') return;
+    var btn = wrap.querySelector('.n-btn');
+    if(btn) playFrames(btn, expandFrames, 24);
+  });
 }
 
 /* ============================================================
@@ -821,6 +911,7 @@ var seed = ensureNode('seed', null);
 seed.x = W/2; seed.y = H/2;
 render();
 wireSeedHover();
+startWandering();
 </script>
 
 </body>
