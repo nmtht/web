@@ -1,0 +1,41 @@
+---
+// Logo (draggable) + reset map button.
+// Logo is part of the graph field physics in the full implementation.
+---
+<header>
+  <button class="logo" id="logo" aria-label="nt! — reset map">nt!</button>
+  <button id="resetMap" class="brand-hover">reset map</button>
+</header>
+
+<style>
+  header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px var(--gutter);
+    mix-blend-mode: difference;
+    color: var(--white);
+    pointer-events: none;
+  }
+  header * { pointer-events: auto; }
+  .logo {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 23px;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    width: 175px;
+    white-space: nowrap;
+    overflow: visible;
+    text-align: left;
+  }
+  #resetMap {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+  }
+</style>

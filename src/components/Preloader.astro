@@ -1,0 +1,41 @@
+---
+// Preloader: "name that!" types → compresses to "nt!" → fades out.
+// Behaviour must match the prototype exactly.
+---
+<div id="preloader" aria-hidden="true">
+  <div id="preloader-mark">nt!</div>
+</div>
+
+<style>
+  #preloader {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity .6s ease;
+  }
+  #preloader.hide {
+    opacity: 0;
+    pointer-events: none;
+  }
+  #preloader-mark {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: clamp(32px, 7vw, 90px);
+    color: var(--black);
+    text-transform: lowercase;
+  }
+</style>
+
+<script>
+  // Minimal stub — full animation logic will be ported from prototype
+  document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('preloader');
+    if (!el) return;
+    // TODO: typewriter + compress animation from prototype
+    setTimeout(() => el.classList.add('hide'), 1200);
+  });
+</script>

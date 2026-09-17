@@ -1,0 +1,68 @@
+---
+// Main map page — one interactive island.
+// Content will be fetched from Sanity at build time (or hybrid).
+import Preloader from '../components/Preloader.astro';
+import Header from '../components/Header.astro';
+import LangToggle from '../components/LangToggle.astro';
+import GraphIsland from '../components/graph/GraphIsland';
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title>name that! — nt!</title>
+    <meta name="description" content="name that! — a map of thinking. click to expand." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <style is:global>
+      @font-face {
+        font-family: 'Latin Modern Math';
+        src: url('https://mathfonts.github.io/LatinModern/latinmodern-math.woff2') format('woff2'),
+             url('https://mathfonts.github.io/LatinModern/latinmodern-math.woff') format('woff');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+      :root {
+        --black: #111110;
+        --white: #ffffff;
+        --grey-light: #e4e2dd;
+        --gutter: clamp(20px, 4vw, 64px);
+        --font-body: 'Manrope', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+        --font-display: 'Latin Modern Math', 'STIX Two Text', 'Cambria Math', Georgia, serif;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { height: 100%; overflow: hidden; background: var(--white); color: var(--black); }
+      body { font-family: var(--font-body); font-weight: 400; -webkit-font-smoothing: antialiased; }
+      @media (prefers-reduced-motion: reduce) {
+        * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+      }
+      a { color: inherit; text-decoration: none; }
+      button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; text-align: left; }
+      a:focus-visible, button:focus-visible { outline: 2px solid var(--black); outline-offset: 3px; }
+      .brand-hover {
+        font-family: var(--font-body);
+        font-style: normal;
+        text-transform: none;
+        transition: font-family .18s ease, font-style .18s ease, opacity .3s ease;
+      }
+      .brand-hover:hover,
+      .brand-hover:focus-visible {
+        font-family: var(--font-display);
+        font-style: italic;
+        text-transform: lowercase;
+      }
+    </style>
+  </head>
+  <body>
+    <Preloader />
+    <Header />
+    <div id="stage">
+      <!-- Graph island: client-only, no SSR -->
+      <GraphIsland client:only="react" />
+    </div>
+    <LangToggle />
+  </body>
+</html>
