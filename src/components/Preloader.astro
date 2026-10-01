@@ -1,6 +1,5 @@
 ---
-// Preloader: "name that!" → compresses to "nt!" → fades out.
-// Waits for Latin Modern before showing text (no fallback flash).
+// Preloader: waits for LM Math, then italic (oblique) collapse animation.
 ---
 <div id="preloader" aria-hidden="true">
   <div id="preloader-mark" class="is-waiting">name that!</div>
@@ -30,7 +29,7 @@
     color: var(--black);
     text-transform: lowercase;
     white-space: nowrap;
-    font-synthesis: none;
+    font-synthesis: style;
     -webkit-font-smoothing: antialiased;
     opacity: 1;
     transition: opacity 0.15s ease;
@@ -69,16 +68,10 @@
   async function whenFontsReady() {
     try {
       if (document.fonts?.load) {
-        // File is upright; we registered it as italic too — load both.
-        await Promise.all([
-          document.fonts.load("400 48px 'Latin Modern Math'"),
-          document.fonts.load("italic 400 48px 'Latin Modern Math'"),
-        ]);
+        await document.fonts.load("400 48px 'Latin Modern Math'");
         await document.fonts.ready;
       }
-    } catch (_) {
-      // proceed with whatever is available
-    }
+    } catch (_) {}
   }
 
   document.addEventListener('DOMContentLoaded', async () => {

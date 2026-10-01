@@ -35,9 +35,9 @@ try {
     />
     <style is:global>
       /*
-        Latin Modern Math ships as a single upright face.
-        Register it for both normal and italic so `font-style: italic`
-        does not fall back to Georgia/system (which looked "bold").
+        Latin Modern Math is upright-only. Register ONLY as normal.
+        Italic = browser oblique (font-synthesis: style).
+        Do not register the same file as italic — that forced upright glyphs.
       */
       @font-face {
         font-family: 'Latin Modern Math';
@@ -47,21 +47,12 @@ try {
         font-style: normal;
         font-display: block;
       }
-      @font-face {
-        font-family: 'Latin Modern Math';
-        src: url('https://mathfonts.github.io/LatinModern/latinmodern-math.woff2') format('woff2'),
-             url('https://mathfonts.github.io/LatinModern/latinmodern-math.woff') format('woff');
-        font-weight: 400;
-        font-style: italic;
-        font-display: block;
-      }
       :root {
         --black: #111110;
         --white: #ffffff;
         --grey-light: #e4e2dd;
         --gutter: clamp(20px, 4vw, 64px);
         --font-body: 'Manrope', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
-        /* No Georgia/system in the stack — avoids weight flash */
         --font-display: 'Latin Modern Math', serif;
         --mark-size: clamp(28px, 4vw, 48px);
       }
@@ -71,9 +62,11 @@ try {
         font-family: var(--font-body);
         font-weight: 400;
         -webkit-font-smoothing: antialiased;
-        font-synthesis: none;
       }
-      /* Display marks: fixed weight, no synthetic bold/italic */
+      /*
+        style = allow oblique italic of LM Math
+        weight = forbid synthetic bold (the “fat flash”)
+      */
       .font-display,
       #preloader-mark,
       .logo,
@@ -83,7 +76,7 @@ try {
         font-family: var(--font-display);
         font-weight: 400;
         font-style: italic;
-        font-synthesis: none;
+        font-synthesis: style;
         -webkit-font-smoothing: antialiased;
       }
       @media (prefers-reduced-motion: reduce) {
@@ -104,7 +97,7 @@ try {
         font-style: italic;
         font-weight: 400;
         text-transform: lowercase;
-        font-synthesis: none;
+        font-synthesis: style;
       }
     </style>
   </head>
