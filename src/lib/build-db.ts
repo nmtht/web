@@ -18,10 +18,10 @@ function resolveImages(images?: SanityImage[]): string[] {
 
 export function buildDb(content: MapContent): Record<string, GraphNode> {
   const db: Record<string, GraphNode> = {
-    seed: { id: 'seed', type: 'seed', title: { en: "name what's next.", ru: 'назови, что дальше.' } },
-    that: { id: 'that', type: 'main', title: { en: 'THAT!', ru: 'THAT!' } },
-    think: { id: 'think', type: 'main', title: { en: 'THINK', ru: 'THINK' } },
-    next: { id: 'next', type: 'main', title: { en: 'NEXT', ru: 'NEXT' } },
+    seed: { id: 'seed', type: 'seed', title: { en: "name what's next.", ru: 'а что потом?' } },
+    that: { id: 'that', type: 'main', title: { en: 'THAT!', ru: 'это!' } },
+    think: { id: 'think', type: 'main', title: { en: 'THINK', ru: 'мысль' } },
+    next: { id: 'next', type: 'main', title: { en: 'NEXT', ru: 'после' } },
   };
 
   for (const p of content?.projects ?? []) {
