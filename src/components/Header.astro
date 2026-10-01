@@ -1,6 +1,5 @@
 ---
-// Logo (draggable) + reset map button.
-// Logo is part of the graph field physics in the full implementation.
+// Logo (nt! ↔ name that! on hover) + reset map.
 ---
 <header>
   <button class="logo" id="logo" aria-label="nt! — reset map">nt!</button>
@@ -33,9 +32,57 @@
     white-space: nowrap;
     overflow: visible;
     text-align: left;
+    text-transform: lowercase;
+    font-synthesis: none;
+    -webkit-font-smoothing: antialiased;
   }
   #resetMap {
     font-size: 12px;
     letter-spacing: 0.06em;
   }
 </style>
+
+<script>
+  const FULL_MARK = 'name that!';
+  const SHORT_MARK = 'nt!';
+
+  function buildFrames(full, cutoffLen, forced) {
+    const frames = [];
+    for (let i = full.length; i > cutoffLen; i--) frames.push(full.slice(0, i));
+    frames.push(forced);
+    return frames;
+  }
+
+  function playFrames(el, frames, speed, onDone) {
+    const token = {};
+    el._playToken = token;
+    let i = 0;
+    function step() {
+      if (el._playToken !== token) return;
+      if (i < frames.length) {
+        el.textContent = frames[i];
+        i++;
+        setTimeout(step, speed);
+      } else if (onDone) onDone();
+    }
+    step();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('logo');
+    if (!el) return;
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.textContent = SHORT_MARK;
+
+    if (reduceMotion) return;
+
+    const expandFrames = buildFrames(FULL_MARK, 1, SHORT_MARK).slice().reverse();
+    const collapseFrames = buildFrames(FULL_MARK, 1, SHORT_MARK);
+
+    el.addEventListener('mouseenter', () => playFrames(el, expandFrames, 42));
+    el.addEventListener('focus', () => playFrames(el, expandFrames, 42));
+    el.addEventListener('mouseleave', () => playFrames(el, collapseFrames, 42));
+    el.addEventListener('blur', () => playFrames(el, collapseFrames, 42));
+  });
+</script>

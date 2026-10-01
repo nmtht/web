@@ -1,5 +1,6 @@
 ---
 // Preloader: "name that!" → compresses to "nt!" → fades out.
+// Size matched to seed node on the map.
 ---
 <div id="preloader" aria-hidden="true">
   <div id="preloader-mark">name that!</div>
@@ -23,10 +24,14 @@
   #preloader-mark {
     font-family: var(--font-display);
     font-style: italic;
-    font-size: clamp(32px, 7vw, 90px);
+    font-weight: 400;
+    font-size: clamp(28px, 4vw, 48px);
+    line-height: 1;
     color: var(--black);
     text-transform: lowercase;
     white-space: nowrap;
+    font-synthesis: none;
+    -webkit-font-smoothing: antialiased;
   }
 </style>
 
@@ -56,7 +61,16 @@
     step();
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  async function whenFontsReady() {
+    try {
+      if (document.fonts?.load) {
+        await document.fonts.load("italic 400 48px 'Latin Modern Math'");
+        await document.fonts.ready;
+      }
+    } catch (_) {}
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
     const overlayEl = document.getElementById('preloader');
     const mark = document.getElementById('preloader-mark');
     if (!overlayEl || !mark) return;
@@ -70,6 +84,8 @@
       }, 650);
     }
 
+    await whenFontsReady();
+
     if (reduceMotion) {
       mark.textContent = SHORT_MARK;
       setTimeout(finish, 300);
@@ -82,6 +98,6 @@
       playFrames(mark, collapseFrames, 45, () => {
         setTimeout(finish, 350);
       });
-    }, 500);
+    }, 400);
   });
 </script>
