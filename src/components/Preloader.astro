@@ -1,9 +1,8 @@
 ---
-// Preloader: "name that!" types → compresses to "nt!" → fades out.
-// Behaviour must match the prototype exactly.
+// Preloader: "name that!" → compresses to "nt!" → fades out.
 ---
 <div id="preloader" aria-hidden="true">
-  <div id="preloader-mark">nt!</div>
+  <div id="preloader-mark">name that!</div>
 </div>
 
 <style>
@@ -15,7 +14,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: opacity .6s ease;
+    transition: opacity 0.6s ease;
   }
   #preloader.hide {
     opacity: 0;
@@ -27,15 +26,62 @@
     font-size: clamp(32px, 7vw, 90px);
     color: var(--black);
     text-transform: lowercase;
+    white-space: nowrap;
   }
 </style>
 
 <script>
-  // Minimal stub — full animation logic will be ported from prototype
+  const FULL_MARK = 'name that!';
+  const SHORT_MARK = 'nt!';
+
+  function buildFrames(full, cutoffLen, forced) {
+    const frames = [];
+    for (let i = full.length; i > cutoffLen; i--) frames.push(full.slice(0, i));
+    frames.push(forced);
+    return frames;
+  }
+
+  function playFrames(el, frames, speed, onDone) {
+    const token = {};
+    el._playToken = token;
+    let i = 0;
+    function step() {
+      if (el._playToken !== token) return;
+      if (i < frames.length) {
+        el.textContent = frames[i];
+        i++;
+        setTimeout(step, speed);
+      } else if (onDone) onDone();
+    }
+    step();
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
-    const el = document.getElementById('preloader');
-    if (!el) return;
-    // TODO: typewriter + compress animation from prototype
-    setTimeout(() => el.classList.add('hide'), 1200);
+    const overlayEl = document.getElementById('preloader');
+    const mark = document.getElementById('preloader-mark');
+    if (!overlayEl || !mark) return;
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function finish() {
+      overlayEl.classList.add('hide');
+      setTimeout(() => {
+        overlayEl.style.display = 'none';
+      }, 650);
+    }
+
+    if (reduceMotion) {
+      mark.textContent = SHORT_MARK;
+      setTimeout(finish, 300);
+      return;
+    }
+
+    mark.textContent = FULL_MARK;
+    const collapseFrames = buildFrames(FULL_MARK, 1, SHORT_MARK);
+    setTimeout(() => {
+      playFrames(mark, collapseFrames, 45, () => {
+        setTimeout(finish, 350);
+      });
+    }, 500);
   });
 </script>
