@@ -34,13 +34,26 @@ try {
       crossorigin
     />
     <style is:global>
+      /*
+        Latin Modern Math ships as a single upright face.
+        Register it for both normal and italic so `font-style: italic`
+        does not fall back to Georgia/system (which looked "bold").
+      */
       @font-face {
         font-family: 'Latin Modern Math';
         src: url('https://mathfonts.github.io/LatinModern/latinmodern-math.woff2') format('woff2'),
              url('https://mathfonts.github.io/LatinModern/latinmodern-math.woff') format('woff');
         font-weight: 400;
         font-style: normal;
-        font-display: optional;
+        font-display: block;
+      }
+      @font-face {
+        font-family: 'Latin Modern Math';
+        src: url('https://mathfonts.github.io/LatinModern/latinmodern-math.woff2') format('woff2'),
+             url('https://mathfonts.github.io/LatinModern/latinmodern-math.woff') format('woff');
+        font-weight: 400;
+        font-style: italic;
+        font-display: block;
       }
       :root {
         --black: #111110;
@@ -48,8 +61,8 @@ try {
         --grey-light: #e4e2dd;
         --gutter: clamp(20px, 4vw, 64px);
         --font-body: 'Manrope', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
-        --font-display: 'Latin Modern Math', 'STIX Two Text', 'Cambria Math', Georgia, serif;
-        /* Shared scale for preloader + seed */
+        /* No Georgia/system in the stack — avoids weight flash */
+        --font-display: 'Latin Modern Math', serif;
         --mark-size: clamp(28px, 4vw, 48px);
       }
       * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -59,6 +72,19 @@ try {
         font-weight: 400;
         -webkit-font-smoothing: antialiased;
         font-synthesis: none;
+      }
+      /* Display marks: fixed weight, no synthetic bold/italic */
+      .font-display,
+      #preloader-mark,
+      .logo,
+      .n-seed-btn,
+      .n-main-btn,
+      .n-q-btn {
+        font-family: var(--font-display);
+        font-weight: 400;
+        font-style: italic;
+        font-synthesis: none;
+        -webkit-font-smoothing: antialiased;
       }
       @media (prefers-reduced-motion: reduce) {
         * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
@@ -76,7 +102,9 @@ try {
       .brand-hover:focus-visible {
         font-family: var(--font-display);
         font-style: italic;
+        font-weight: 400;
         text-transform: lowercase;
+        font-synthesis: none;
       }
     </style>
   </head>

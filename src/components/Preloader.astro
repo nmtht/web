@@ -1,9 +1,9 @@
 ---
 // Preloader: "name that!" → compresses to "nt!" → fades out.
-// Size matched to seed node on the map.
+// Waits for Latin Modern before showing text (no fallback flash).
 ---
 <div id="preloader" aria-hidden="true">
-  <div id="preloader-mark">name that!</div>
+  <div id="preloader-mark" class="is-waiting">name that!</div>
 </div>
 
 <style>
@@ -25,13 +25,18 @@
     font-family: var(--font-display);
     font-style: italic;
     font-weight: 400;
-    font-size: clamp(28px, 4vw, 48px);
+    font-size: var(--mark-size, clamp(28px, 4vw, 48px));
     line-height: 1;
     color: var(--black);
     text-transform: lowercase;
     white-space: nowrap;
     font-synthesis: none;
     -webkit-font-smoothing: antialiased;
+    opacity: 1;
+    transition: opacity 0.15s ease;
+  }
+  #preloader-mark.is-waiting {
+    opacity: 0;
   }
 </style>
 
@@ -64,10 +69,16 @@
   async function whenFontsReady() {
     try {
       if (document.fonts?.load) {
-        await document.fonts.load("italic 400 48px 'Latin Modern Math'");
+        // File is upright; we registered it as italic too — load both.
+        await Promise.all([
+          document.fonts.load("400 48px 'Latin Modern Math'"),
+          document.fonts.load("italic 400 48px 'Latin Modern Math'"),
+        ]);
         await document.fonts.ready;
       }
-    } catch (_) {}
+    } catch (_) {
+      // proceed with whatever is available
+    }
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
@@ -85,6 +96,7 @@
     }
 
     await whenFontsReady();
+    mark.classList.remove('is-waiting');
 
     if (reduceMotion) {
       mark.textContent = SHORT_MARK;
@@ -98,6 +110,6 @@
       playFrames(mark, collapseFrames, 45, () => {
         setTimeout(finish, 350);
       });
-    }, 400);
+    }, 350);
   });
 </script>
