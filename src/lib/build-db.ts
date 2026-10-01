@@ -1,9 +1,21 @@
-import type { GraphNode, MapContent } from './graph-types';
+import type { GraphNode, MapContent, SanityImage } from './graph-types';
+import { urlFor } from './image-url';
 
-/**
- * Build prototype-style DB from Sanity map content.
- * Questions that lead to projects attach under THAT!; research under THINK.
- */
+function resolveImages(images?: SanityImage[]): string[] {
+  if (!images?.length) return [];
+  const urls: string[] = [];
+  for (const img of images) {
+    const direct = img.asset?.url;
+    if (typeof direct === 'string' && direct) {
+      urls.push(direct);
+      continue;
+    }
+    const built = urlFor(img as any);
+    if (built) urls.push(built);
+  }
+  return urls;
+}
+
 export function buildDb(content: MapContent): Record<string, GraphNode> {
   const db: Record<string, GraphNode> = {
     seed: { id: 'seed', type: 'seed', title: { en: "name what's next.", ru: 'назови, что дальше.' } },
@@ -21,6 +33,7 @@ export function buildDb(content: MapContent): Record<string, GraphNode> {
       kind: p.kind,
       body: p.body,
       parentMain: 'that',
+      imageUrls: resolveImages(p.images),
     };
   }
 
@@ -33,6 +46,7 @@ export function buildDb(content: MapContent): Record<string, GraphNode> {
       kind: r.kind,
       body: r.body,
       parentMain: 'think',
+      imageUrls: resolveImages(r.images),
     };
   }
 

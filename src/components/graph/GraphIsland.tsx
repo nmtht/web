@@ -1,6 +1,6 @@
 /**
- * Interactive force-directed map.
- * Nodes = HTML (absolute + transform). SVG = links only. No foreignObject.
+ * Interactive force-directed map + 3D drum expand.
+ * Nodes = HTML. SVG = links only.
  */
 import { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
@@ -15,16 +15,104 @@ type Props = {
 
 function nodeSize(d: GraphNode, expanded: Set<string>): { w: number; h: number } {
   if (expanded.has(d.id) && (d.type === 'project' || d.type === 'research')) {
-    return { w: 340, h: 280 };
+    return { w: 420, h: 360 };
   }
   if (expanded.has(d.id) && d.id === 'next') {
-    return { w: 360, h: 300 };
+    return { w: 420, h: 360 };
   }
   if (d.type === 'seed') return { w: 420, h: 70 };
   if (d.type === 'main') return { w: 160, h: 56 };
   if (d.type === 'question') return { w: 280, h: 64 };
   if (d.type === 'project' || d.type === 'research') return { w: 220, h: 56 };
   return { w: 120, h: 40 };
+}
+
+function drumCardHTML(src: string): string {
+  const img = `<img src="${src}" alt="" draggable="false" />`;
+  return `<div class="card-face card-front">${img}</div><div class="card-face card-back">${img}</div>`;
+}
+
+function drumLabelHTML(content: string): string {
+  return `<div class="lbl-face lbl-front"><div class="lbl-inner">${content}</div></div><div class="lbl-face lbl-back"><div class="lbl-inner">${content}</div></div>`;
+}
+
+function buildProjectDrumHTML(d: GraphNode): string {
+  const urls = d.imageUrls ?? [];
+  const n = Math.max(urls.length, 1);
+  const R = 150;
+  const R2 = 235;
+  let html = `<div class="drum-comp" data-drum="1">`;
+  html += `<button type="button" class="exp-close" data-close="1" aria-label="Close">×</button>`;
+  html += `<div class="drum-scene"><div class="drum-tilt"><div class="drum-ring3d" data-ring="1">`;
+
+  if (urls.length) {
+    urls.forEach((src, i) => {
+      const ang = i * (360 / n);
+      html += `<div class="drum-card3d" style="transform:rotateY(${ang}deg) translateZ(${R}px)">${drumCardHTML(src)}</div>`;
+    });
+  }
+
+  const labels = [
+    `<strong>${d.leafTitle || ''}</strong>${L(d.meta)}${d.meta || d.kind ? ' · ' : ''}${L(d.kind)}`,
+    L(d.body),
+  ];
+  const labelAngles = [60, 180, 300];
+  labels.forEach((content, i) => {
+    if (!content) return;
+    html += `<div class="drum-label3d" style="transform:rotateY(${labelAngles[i]}deg) translateZ(${R2}px)">${drumLabelHTML(content)}</div>`;
+  });
+
+  html += `</div></div></div></div>`;
+  return html;
+}
+
+function buildNextDrumHTML(practice: MapContent extends null ? never : NonNullable<MapContent>['practiceInfo']): string {
+  const invite = L(practice?.inviteLine) || L(DEFAULT_UI.seed);
+  const desc = L(practice?.practiceDescription);
+  const author = practice?.authorName || '';
+  const role = L(practice?.authorRole);
+  const bio = L(practice?.authorBio);
+  const email = practice?.contactEmail || '';
+  const note = L(practice?.contactNote);
+  const socials = (practice?.socialLinks ?? [])
+    .map((s) =>
+      s?.url
+        ? `<a class="brand-hover" href="${s.url}" target="_blank" rel="noopener">${s.label || s.url}</a>`
+        : ''
+    )
+    .filter(Boolean)
+    .join('<br>');
+
+  const R2 = 210;
+  const labels = [
+    `<span style="font-family:var(--font-display);font-style:italic">${invite}</span><br>${desc}`,
+    `<strong>${author}</strong>${role ? ' · ' + role : ''}<br>${bio}`,
+    `${L(DEFAULT_UI.contact)}<br>${
+      email ? `<a class="brand-hover" href="mailto:${email}">${email}</a><br>` : ''
+    }${note}${socials ? '<br>' + socials : ''}`,
+  ];
+  const labelAngles = [60, 180, 300];
+
+  let html = `<div class="drum-comp" data-drum="1">`;
+  html += `<button type="button" class="exp-close" data-close="1" aria-label="Close">×</button>`;
+  html += `<div class="drum-scene"><div class="drum-tilt"><div class="drum-ring3d" data-ring="1">`;
+  labels.forEach((content, i) => {
+    html += `<div class="drum-label3d" style="transform:rotateY(${labelAngles[i]}deg) translateZ(${R2}px)">${drumLabelHTML(content)}</div>`;
+  });
+  html += `</div></div></div></div>`;
+  return html;
+}
+
+function buildFlatCardHTML(d: GraphNode): string {
+  const kicker = d.type === 'project' ? 'THAT!' : 'THINK';
+  return `
+    <div class="exp-card">
+      <button type="button" class="exp-close" data-close="1" aria-label="Close">×</button>
+      <div class="exp-kicker">${kicker}</div>
+      <div class="exp-title">${d.leafTitle || ''}</div>
+      <div class="exp-meta"><span>${L(d.kind)}</span><span>${L(d.meta)}</span></div>
+      <p class="exp-body">${L(d.body)}</p>
+    </div>`;
 }
 
 export default function GraphIsland({ content, fetchError }: Props) {
@@ -58,7 +146,7 @@ export default function GraphIsland({ content, fetchError }: Props) {
         console.warn('[graph] missing node', id);
         return { id, type: 'tag' };
       }
-      const n: GraphNode = { ...base };
+      const n: GraphNode = { ...base, _angle: 0 };
       if (parent) {
         n.x = (parent.x ?? W() / 2) + (Math.random() - 0.5) * 40;
         n.y = (parent.y ?? H() / 2) + (Math.random() - 0.5) * 40;
@@ -195,7 +283,64 @@ export default function GraphIsland({ content, fetchError }: Props) {
       }
     }
 
-    // --- D3 simulation ---
+    function wireDrum(wrap: HTMLElement, d: GraphNode) {
+      const ring = wrap.querySelector('[data-ring]') as HTMLElement | null;
+      const scene = wrap.querySelector('.drum-scene') as HTMLElement | null;
+      if (!ring || !scene) return;
+
+      if (d._angle == null) d._angle = 0;
+      const apply = () => {
+        ring.style.transform = `rotateY(${d._angle}deg)`;
+      };
+      apply();
+
+      let dragging = false;
+
+      const onPointerDown = (e: PointerEvent) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('button, a')) return;
+        e.stopPropagation();
+        e.preventDefault();
+        dragging = true;
+        const startX = e.clientX;
+        const startAngle = d._angle ?? 0;
+        let moved = false;
+
+        const onMove = (ev: PointerEvent) => {
+          const dx = ev.clientX - startX;
+          if (Math.abs(dx) > 4) moved = true;
+          d._angle = startAngle + dx * 0.4;
+          apply();
+        };
+        const onUp = () => {
+          dragging = false;
+          window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('pointerup', onUp);
+          if (!moved && !target.closest('.drum-card3d, .drum-label3d')) {
+            toggleExpand(d.id);
+          }
+        };
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
+      };
+
+      scene.addEventListener('pointerdown', onPointerDown);
+
+      const token = {};
+      d._animToken = token;
+      const tick = () => {
+        if (d._animToken !== token) return;
+        if (!dragging && expanded.has(d.id)) {
+          d._angle = (d._angle ?? 0) + 0.045;
+          apply();
+        }
+        if (expanded.has(d.id) && d._animToken === token) {
+          requestAnimationFrame(tick);
+        }
+      };
+      requestAnimationFrame(tick);
+    }
+
     const simulation = d3
       .forceSimulation<GraphNode>([])
       .force(
@@ -203,16 +348,19 @@ export default function GraphIsland({ content, fetchError }: Props) {
         d3
           .forceLink<GraphNode, GraphLink>([])
           .id((d) => d.id)
-          .distance(140)
-          .strength(0.4)
+          .distance(160)
+          .strength(0.35)
       )
-      .force('charge', d3.forceManyBody().strength(-420))
-      .force('collision', d3.forceCollide<GraphNode>().radius((d) => {
-        const s = nodeSize(d, expanded);
-        return Math.max(s.w, s.h) * 0.45;
-      }))
-      .force('x', d3.forceX(W() / 2).strength(0.03))
-      .force('y', d3.forceY(H() / 2).strength(0.03))
+      .force('charge', d3.forceManyBody().strength(-480))
+      .force(
+        'collision',
+        d3.forceCollide<GraphNode>().radius((d) => {
+          const s = nodeSize(d, expanded);
+          return Math.max(s.w, s.h) * 0.42;
+        })
+      )
+      .force('x', d3.forceX(W() / 2).strength(0.025))
+      .force('y', d3.forceY(H() / 2).strength(0.025))
       .on('tick', ticked);
 
     const zoom = d3
@@ -226,8 +374,6 @@ export default function GraphIsland({ content, fetchError }: Props) {
       });
 
     d3.select(svg).call(zoom as any);
-
-    // pan empty space: prevent node drag conflict via filter
     d3.select(svg).on('dblclick.zoom', null);
 
     function ticked() {
@@ -239,9 +385,9 @@ export default function GraphIsland({ content, fetchError }: Props) {
           d._wanderTargetY = (d.y ?? 0) + (Math.random() - 0.5) * 80;
           d._wanderAt = now + 3500 + Math.random() * 2000;
         }
-        if (d._wanderTargetX != null && d.x != null) {
+        if (d._wanderTargetX != null && d.x != null && d.y != null) {
           d.x += (d._wanderTargetX - d.x) * 0.006;
-          d.y! += (d._wanderTargetY! - d.y!) * 0.006;
+          d.y += (d._wanderTargetY! - d.y) * 0.006;
         }
       });
 
@@ -273,38 +419,6 @@ export default function GraphIsland({ content, fetchError }: Props) {
       return L(d.title);
     }
 
-    function expandedHTML(d: GraphNode): string {
-      if (d.id === 'next') {
-        const invite = L(practice?.inviteLine) || L(DEFAULT_UI.hint);
-        const desc = L(practice?.practiceDescription);
-        const author = practice?.authorName || '';
-        const role = L(practice?.authorRole);
-        const bio = L(practice?.authorBio);
-        const email = practice?.contactEmail || '';
-        const note = L(practice?.contactNote);
-        return `
-          <div class="exp-card">
-            <button type="button" class="exp-close" data-close="1" aria-label="Close">×</button>
-            <div class="exp-kicker">NEXT</div>
-            <div class="exp-body" style="font-family:var(--font-display);font-style:italic;margin-bottom:12px">${invite}</div>
-            <p class="exp-body">${desc}</p>
-            <div class="exp-meta" style="margin-top:14px"><strong>${author}</strong> · ${role}</div>
-            <p class="exp-body" style="margin-top:8px">${bio}</p>
-            ${email ? `<p class="exp-body" style="margin-top:10px"><a class="brand-hover" href="mailto:${email}">${email}</a></p>` : ''}
-            ${note ? `<p class="exp-body" style="opacity:.7;font-size:12px">${note}</p>` : ''}
-          </div>`;
-      }
-      const kicker = d.type === 'project' ? 'THAT!' : 'THINK';
-      return `
-        <div class="exp-card">
-          <button type="button" class="exp-close" data-close="1" aria-label="Close">×</button>
-          <div class="exp-kicker">${kicker}</div>
-          <div class="exp-title">${d.leafTitle || ''}</div>
-          <div class="exp-meta"><span>${L(d.kind)}</span><span>${L(d.meta)}</span></div>
-          <p class="exp-body">${L(d.body)}</p>
-        </div>`;
-    }
-
     function collapsedHTML(d: GraphNode): string {
       if (d.type === 'project' || d.type === 'research') {
         return `<button type="button" class="n-btn"><span class="n-title">${d.leafTitle || ''}</span><span class="n-meta">${L(d.kind)}</span></button>`;
@@ -320,6 +434,15 @@ export default function GraphIsland({ content, fetchError }: Props) {
       return `<button type="button" class="${cls}">${labelFor(d)}</button>`;
     }
 
+    function expandedHTML(d: GraphNode): string {
+      if (d.id === 'next') return buildNextDrumHTML(practice);
+      if ((d.type === 'project' || d.type === 'research') && (d.imageUrls?.length ?? 0) > 0) {
+        return buildProjectDrumHTML(d);
+      }
+      if (d.type === 'project' || d.type === 'research') return buildFlatCardHTML(d);
+      return collapsedHTML(d);
+    }
+
     const drag = d3
       .drag<HTMLElement, GraphNode>()
       .clickDistance(6)
@@ -333,13 +456,11 @@ export default function GraphIsland({ content, fetchError }: Props) {
         d.fx = event.x;
         d.fy = event.y;
       })
-      .on('end', (event, d) => {
+      .on('end', (event) => {
         if (!event.active) simulation.alphaTarget(0);
-        // keep pinned after drag (prototype behaviour)
       });
 
     function render() {
-      // links
       const linkSel = d3
         .select(linksLayer)
         .selectAll<SVGPathElement, GraphLink>('path.link')
@@ -358,13 +479,14 @@ export default function GraphIsland({ content, fetchError }: Props) {
         .attr('stroke-width', 1)
         .attr('fill', 'none');
 
-      // nodes as HTML
       const existing = new Set(
         Array.from(nodesLayer.querySelectorAll('.graph-node')).map((el) => (el as HTMLElement).dataset.id)
       );
 
       activeNodes.forEach((d) => {
         let el = nodesLayer.querySelector(`[data-id="${CSS.escape(d.id)}"]`) as HTMLElement | null;
+        const isExp = expanded.has(d.id);
+
         if (!el) {
           el = document.createElement('div');
           el.className = `graph-node n-${d.type}`;
@@ -378,7 +500,6 @@ export default function GraphIsland({ content, fetchError }: Props) {
           el.style.justifyContent = 'center';
           el.style.textAlign = 'center';
           nodesLayer.appendChild(el);
-
           d3.select(el).datum(d).call(drag as any);
 
           el.addEventListener('click', (ev) => {
@@ -388,14 +509,18 @@ export default function GraphIsland({ content, fetchError }: Props) {
               render();
               return;
             }
-            if ((ev as any).defaultPrevented) return;
+            if (t.closest('[data-drum]')) return;
             handleNodeClick(nodeById[d.id] || d);
           });
         }
 
-        const isExp = expanded.has(d.id);
         el.innerHTML = isExp ? expandedHTML(d) : collapsedHTML(d);
         el.classList.toggle('is-expanded', isExp);
+
+        if (isExp && el.querySelector('[data-drum]')) {
+          wireDrum(el, d);
+        }
+
         existing.delete(d.id);
       });
 
@@ -407,16 +532,14 @@ export default function GraphIsland({ content, fetchError }: Props) {
       simulation.nodes(activeNodes);
       const linkForce = simulation.force('link') as d3.ForceLink<GraphNode, GraphLink>;
       linkForce.links(activeLinks);
-      simulation.alpha(0.6).restart();
+      simulation.alpha(0.55).restart();
     }
 
-    // boot
     const seed = ensureNode('seed', null);
     seed.x = W() / 2;
     seed.y = H() / 2;
     render();
 
-    // wire header reset + lang if present
     const resetBtn = document.getElementById('resetMap');
     const onReset = () => {
       activeNodes = [];
@@ -443,8 +566,8 @@ export default function GraphIsland({ content, fetchError }: Props) {
     langBtn?.addEventListener('click', onLang);
 
     const onResize = () => {
-      simulation.force('x', d3.forceX(W() / 2).strength(0.03));
-      simulation.force('y', d3.forceY(H() / 2).strength(0.03));
+      simulation.force('x', d3.forceX(W() / 2).strength(0.025));
+      simulation.force('y', d3.forceY(H() / 2).strength(0.025));
       simulation.alpha(0.3).restart();
     };
     window.addEventListener('resize', onResize);
@@ -505,12 +628,73 @@ export default function GraphIsland({ content, fetchError }: Props) {
         }
         .exp-close {
           position: absolute; top: 10px; right: 12px; font-size: 20px; line-height: 1;
-          background: none; border: 0; cursor: pointer;
+          background: none; border: 0; cursor: pointer; z-index: 5;
         }
         .exp-kicker { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
         .exp-title { font-size: 18px; font-weight: 500; margin-bottom: 4px; max-width: 85%; line-height: 1.25; }
         .exp-meta { font-size: 11px; display: flex; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
         .exp-body { font-size: 13.5px; line-height: 1.55; }
+
+        /* ---- 3D drum ---- */
+        .drum-comp {
+          position: relative; width: 100%; height: 100%;
+          background: transparent; cursor: default;
+        }
+        .drum-scene {
+          position: absolute; inset: 0;
+          -webkit-perspective: 1500px; perspective: 1500px;
+          cursor: grab;
+        }
+        .drum-scene:active { cursor: grabbing; }
+        .drum-tilt {
+          width: 100%; height: 100%; position: relative;
+          -webkit-transform-style: preserve-3d; transform-style: preserve-3d;
+          -webkit-transform: rotateX(54deg); transform: rotateX(54deg);
+        }
+        .drum-ring3d {
+          width: 100%; height: 100%; position: absolute; top: 0; left: 0;
+          -webkit-transform-style: preserve-3d; transform-style: preserve-3d;
+        }
+        .drum-card3d {
+          position: absolute; top: 50%; left: 50%;
+          width: 132px; height: 90px; margin: -45px 0 0 -66px;
+          -webkit-transform-style: preserve-3d; transform-style: preserve-3d;
+        }
+        .drum-card3d .card-face {
+          position: absolute; inset: 0;
+          -webkit-backface-visibility: hidden; backface-visibility: hidden;
+          overflow: hidden; background: #fff;
+          box-shadow: 0 0 0 1px rgba(17,17,16,.18);
+        }
+        .drum-card3d .card-back {
+          -webkit-transform: rotateY(180deg); transform: rotateY(180deg);
+        }
+        .drum-card3d img {
+          width: 100%; height: 100%; object-fit: cover; display: block;
+          pointer-events: none; user-select: none;
+        }
+        .drum-label3d {
+          position: absolute; top: 50%; left: 50%;
+          width: 170px; margin: -46px 0 0 -85px;
+          -webkit-transform-style: preserve-3d; transform-style: preserve-3d;
+          text-align: center;
+        }
+        .drum-label3d .lbl-face {
+          position: absolute; top: 0; left: 0; width: 100%;
+          -webkit-backface-visibility: hidden; backface-visibility: hidden;
+        }
+        .drum-label3d .lbl-back {
+          -webkit-transform: rotateY(180deg); transform: rotateY(180deg);
+        }
+        .drum-label3d .lbl-inner {
+          font-size: 10.5px; line-height: 1.45; color: var(--black);
+        }
+        .drum-label3d .lbl-inner strong {
+          display: block; font-weight: 500; font-size: 12.5px; margin-bottom: 3px;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .drum-ring3d { transition: none !important; }
+        }
       `}</style>
       <svg id="graphSvg">
         <g id="viewport">

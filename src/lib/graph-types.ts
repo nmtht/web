@@ -1,7 +1,7 @@
 export type LocaleString = { en?: string; ru?: string } | string | null | undefined;
 
 export type SanityImage = {
-  asset?: { _ref?: string; url?: string };
+  asset?: { _ref?: string; _id?: string; url?: string };
   [key: string]: unknown;
 };
 
@@ -59,7 +59,6 @@ export type GraphNode = {
   id: string;
   type: NodeType;
   title?: LocaleString;
-  /** display title for leaves (untranslated) */
   leafTitle?: string;
   meta?: LocaleString;
   kind?: LocaleString;
@@ -67,6 +66,8 @@ export type GraphNode = {
   leads?: string[];
   parentMain?: 'that' | 'think';
   tagKey?: string;
+  /** resolved image URLs for drum */
+  imageUrls?: string[];
   x?: number;
   y?: number;
   vx?: number;
@@ -76,6 +77,8 @@ export type GraphNode = {
   _wanderTargetX?: number;
   _wanderTargetY?: number;
   _wanderAt?: number;
+  _angle?: number;
+  _animToken?: object;
 };
 
 export type GraphLink = {
