@@ -1,10 +1,20 @@
 ---
-// Main map page — one interactive island.
-// Content will be fetched from Sanity at build time (or hybrid).
 import Preloader from '../components/Preloader.astro';
 import Header from '../components/Header.astro';
 import LangToggle from '../components/LangToggle.astro';
 import GraphIsland from '../components/graph/GraphIsland';
+import { sanity } from '../lib/sanity-client';
+import { mapContent } from '../lib/queries';
+
+let content = null;
+let fetchError = null;
+
+try {
+  content = await sanity.fetch(mapContent);
+} catch (e) {
+  fetchError = e instanceof Error ? e.message : String(e);
+  console.error('[index] Sanity fetch failed:', e);
+}
 ---
 
 <html lang="en">
@@ -60,8 +70,7 @@ import GraphIsland from '../components/graph/GraphIsland';
     <Preloader />
     <Header />
     <div id="stage">
-      <!-- Graph island: client-only, no SSR -->
-      <GraphIsland client:only="react" />
+      <GraphIsland client:only="react" content={content} fetchError={fetchError} />
     </div>
     <LangToggle />
   </body>
