@@ -101,7 +101,7 @@ function buildNextDrumHTML(practice: MapContent extends null ? never : NonNullab
     .join('<br>');
   const R2 = 210;
   const labels = [
-    `<span style="font-family:var(--font-display);font-style:italic">${invite}</span><br>${desc}`,
+    `<span style="font-family:var(--font-display);font-style:italic;font-synthesis:style">${invite}</span><br>${desc}`,
     `<strong>${author}</strong>${role ? ' · ' + role : ''}<br>${bio}`,
     `${L(DEFAULT_UI.contact)}<br>${email ? `<a class="brand-hover" href="mailto:${email}">${email}</a><br>` : ''}${note}${socials ? '<br>' + socials : ''}`,
   ];
@@ -612,19 +612,35 @@ export default function GraphIsland({ content, fetchError }: Props) {
         .graph-node { pointer-events: auto; will-change: transform; }
         .n-btn { font: inherit; background: none; border: 0; cursor: pointer; color: var(--black); text-align: center; }
         .n-seed-btn {
-          font-family: var(--font-display); font-style: italic; font-weight: 400;
-          text-transform: lowercase; font-synthesis: none;
-          font-size: var(--mark-size, clamp(28px, 4vw, 48px)); line-height: 1; white-space: nowrap;
+          font-family: var(--font-display);
+          font-style: italic;
+          font-weight: 400;
+          text-transform: lowercase;
+          font-synthesis: style;
+          font-size: var(--mark-size, clamp(28px, 4vw, 48px));
+          line-height: 1;
+          white-space: nowrap;
           -webkit-font-smoothing: antialiased;
         }
         .n-main-btn {
-          font-family: var(--font-display); font-style: italic; text-transform: lowercase;
-          font-size: clamp(26px, 3.2vw, 42px); line-height: 1;
+          font-family: var(--font-display);
+          font-style: italic;
+          font-weight: 400;
+          text-transform: lowercase;
+          font-synthesis: style;
+          font-size: clamp(26px, 3.2vw, 42px);
+          line-height: 1;
         }
         .n-main-btn:hover { opacity: 0.5; }
         .n-q-btn {
-          font-family: var(--font-display); font-style: italic; text-transform: lowercase;
-          font-size: 15px; line-height: 1.3; max-width: 270px;
+          font-family: var(--font-display);
+          font-style: italic;
+          font-weight: 400;
+          text-transform: lowercase;
+          font-synthesis: style;
+          font-size: 15px;
+          line-height: 1.3;
+          max-width: 270px;
         }
         .n-q-btn:hover { opacity: 0.5; }
         .n-title { display: block; font-size: 16px; line-height: 1.25; }
