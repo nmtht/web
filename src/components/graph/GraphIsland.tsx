@@ -759,8 +759,9 @@ export default function GraphIsland({ content, fetchError }: Props) {
         .drum-card3d .card-face {
           position: absolute; inset: 0;
           -webkit-backface-visibility: hidden; backface-visibility: hidden;
-          overflow: hidden; background: #f4f3ef;
-          box-shadow: 0 0 0 1px rgba(17,17,16,.18);
+          overflow: hidden; background: transparent;
+          box-shadow: none;
+          border: 0;
           display: flex; align-items: center; justify-content: center;
         }
         .drum-card3d .card-back { -webkit-transform: rotateY(180deg); transform: rotateY(180deg); }
