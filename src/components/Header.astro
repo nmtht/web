@@ -1,8 +1,8 @@
 ---
-// Logo (nt! ↔ name that! on hover) + reset map.
+// Logo (nt! ↔ name that! on hover) + click invert + reset map.
 ---
 <header>
-  <button class="logo" id="logo" aria-label="nt! — reset map">nt!</button>
+  <button class="logo" id="logo" aria-label="nt! — invert / brand">nt!</button>
   <button id="resetMap" class="brand-hover">reset map</button>
 </header>
 
@@ -74,6 +74,12 @@
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     el.textContent = SHORT_MARK;
+
+    // Invert field
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.body.classList.toggle('is-inverted');
+    });
 
     if (reduceMotion) return;
 

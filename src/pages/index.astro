@@ -36,7 +36,6 @@ try {
         --grey-light: #e4e2dd;
         --gutter: clamp(20px, 4vw, 64px);
         --font-body: 'Manrope', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
-        /* True italic + Cyrillic */
         --font-display: 'EB Garamond', 'Times New Roman', Times, serif;
         --mark-size: clamp(28px, 4vw, 48px);
       }
@@ -46,18 +45,30 @@ try {
         font-family: var(--font-body);
         font-weight: 400;
         -webkit-font-smoothing: antialiased;
+        transition: background-color 0.35s ease, color 0.35s ease;
       }
-      .font-display,
-      #preloader-mark,
-      .logo,
-      .n-seed-btn,
-      .n-main-btn,
-      .n-q-btn {
+      /* Logo mark stays italic; phrases (seed/mains) are regular via component CSS */
+      .logo {
         font-family: var(--font-display);
         font-weight: 400;
         font-style: italic;
         font-synthesis: none;
         -webkit-font-smoothing: antialiased;
+      }
+      #preloader-mark {
+        font-family: var(--font-display);
+        font-weight: 400;
+        font-style: italic;
+        font-synthesis: none;
+        -webkit-font-smoothing: antialiased;
+      }
+      /* Invert: black field, white type */
+      body.is-inverted {
+        --black: #ffffff;
+        --white: #111110;
+        --grey-light: #3a3936;
+        background: #111110;
+        color: #ffffff;
       }
       @media (prefers-reduced-motion: reduce) {
         * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
