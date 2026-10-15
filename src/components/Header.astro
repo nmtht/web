@@ -17,8 +17,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 22px var(--gutter);
-    mix-blend-mode: difference;
-    color: var(--white);
+    /* Follow theme tokens so invert works */
+    color: var(--black);
     pointer-events: none;
   }
   header * { pointer-events: auto; }
@@ -35,10 +35,12 @@
     text-transform: lowercase;
     font-synthesis: none;
     -webkit-font-smoothing: antialiased;
+    color: var(--black);
   }
   #resetMap {
     font-size: 12px;
     letter-spacing: 0.06em;
+    color: var(--black);
   }
 </style>
 
@@ -75,7 +77,6 @@
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     el.textContent = SHORT_MARK;
 
-    // Invert field
     el.addEventListener('click', (e) => {
       e.preventDefault();
       document.body.classList.toggle('is-inverted');
