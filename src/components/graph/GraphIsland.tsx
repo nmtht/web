@@ -1,6 +1,7 @@
 /**
  * Interactive force-directed map + 3D drum expand.
  * Nodes = HTML. SVG = links only.
+ * Mobile: focus one branch, fit-to-view, centered drum mode.
  */
 import { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
@@ -13,17 +14,26 @@ type Props = {
   fetchError?: string | null;
 };
 
+function isMobileViewport(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
+}
+
 function nodeSize(d: GraphNode, expanded: Set<string>): { w: number; h: number } {
+  const mobile = isMobileViewport();
   if (expanded.has(d.id) && (d.type === 'project' || d.type === 'research')) {
-    return { w: 560, h: 460 };
+    return mobile
+      ? { w: Math.min(window.innerWidth - 24, 360), h: Math.min(window.innerHeight * 0.62, 420) }
+      : { w: 560, h: 460 };
   }
   if (expanded.has(d.id) && d.id === 'next') {
-    return { w: 520, h: 420 };
+    return mobile
+      ? { w: Math.min(window.innerWidth - 24, 340), h: Math.min(window.innerHeight * 0.58, 400) }
+      : { w: 520, h: 420 };
   }
-  if (d.type === 'seed') return { w: 420, h: 70 };
-  if (d.type === 'main') return { w: 160, h: 56 };
-  if (d.type === 'question') return { w: 280, h: 64 };
-  if (d.type === 'project' || d.type === 'research') return { w: 220, h: 56 };
+  if (d.type === 'seed') return mobile ? { w: Math.min(window.innerWidth - 32, 320), h: 56 } : { w: 420, h: 70 };
+  if (d.type === 'main') return mobile ? { w: 140, h: 48 } : { w: 160, h: 56 };
+  if (d.type === 'question') return mobile ? { w: Math.min(window.innerWidth * 0.72, 260), h: 60 } : { w: 280, h: 64 };
+  if (d.type === 'project' || d.type === 'research') return mobile ? { w: 200, h: 52 } : { w: 220, h: 56 };
   return { w: 120, h: 40 };
 }
 
@@ -150,10 +160,44 @@ export default function GraphIsland({ content, fetchError }: Props) {
     let activeLinks: GraphLink[] = [];
     const nodeById: Record<string, GraphNode> = {};
     const expanded = new Set<string>();
+    const parentOf: Record<string, string> = {};
+    let mobileFocus = 'seed';
     let transform = d3.zoomIdentity;
 
     const W = () => window.innerWidth;
     const H = () => window.innerHeight;
+    const isMobile = () => isMobileViewport();
+
+    function pathTo(id: string): string[] {
+      const path: string[] = [];
+      let cur: string | undefined = id;
+      const seen = new Set<string>();
+      while (cur && !seen.has(cur)) {
+        seen.add(cur);
+        path.unshift(cur);
+        cur = parentOf[cur];
+      }
+      if (path[0] !== 'seed' && nodeById['seed']) path.unshift('seed');
+      return path;
+    }
+
+    function drumOpenId(): string | null {
+      for (const id of expanded) {
+        const n = nodeById[id];
+        if (!n) continue;
+        if (n.type === 'project' || n.type === 'research' || id === 'next') return id;
+      }
+      return null;
+    }
+
+    function isNodeVisible(n: GraphNode): boolean {
+      if (!isMobile()) return true;
+      const drum = drumOpenId();
+      if (drum) return n.id === drum;
+      const path = new Set(pathTo(mobileFocus));
+      if (path.has(n.id)) return true;
+      return parentOf[n.id] === mobileFocus;
+    }
 
     function ensureNode(id: string, parent: GraphNode | null): GraphNode {
       if (nodeById[id]) return nodeById[id];
@@ -173,6 +217,7 @@ export default function GraphIsland({ content, fetchError }: Props) {
     }
 
     function ensureLink(a: string, b: string) {
+      if (!parentOf[b] && a !== b) parentOf[b] = a;
       const exists = activeLinks.some((l) => {
         const s = typeof l.source === 'object' ? l.source.id : l.source;
         const t = typeof l.target === 'object' ? l.target.id : l.target;
@@ -185,14 +230,15 @@ export default function GraphIsland({ content, fetchError }: Props) {
       const seed = nodeById['seed'];
       if (!seed) return;
       const angles = [-90, 30, 150];
-      const r = 210;
+      const r = isMobile() ? 130 : 210;
       (['that', 'think', 'next'] as const).forEach((id, i) => {
         const rad = (angles[i] * Math.PI) / 180;
-        const n = ensureNode(id, null);
+        const n = ensureNode(id, seed);
         n.x = (seed.x ?? 0) + Math.cos(rad) * r;
         n.y = (seed.y ?? 0) + Math.sin(rad) * r;
         ensureLink('seed', id);
       });
+      mobileFocus = 'seed';
       const seedEl = nodesLayer.querySelector('[data-id="seed"] .n-seed-btn') as HTMLElement | null;
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (seedEl && !reduceMotion) {
@@ -200,35 +246,54 @@ export default function GraphIsland({ content, fetchError }: Props) {
         playFrames(seedEl, buildFrames(full, 1, 'nt!'), 28, () => {
           seedEl.classList.add('is-nt');
           render();
+          fitMobileView();
         });
       } else {
         render();
+        fitMobileView();
       }
     }
 
     function expandMain(mainId: 'that' | 'think') {
       const mainNode = nodeById[mainId];
       if (!mainNode) return;
-      questionsForMain(db, mainId).forEach((qid) => {
-        ensureNode(qid, mainNode);
+      const qs = questionsForMain(db, mainId);
+      const r = isMobile() ? 120 : 180;
+      qs.forEach((qid, i) => {
+        const n = ensureNode(qid, mainNode);
+        const ang = (i - (qs.length - 1) / 2) * (isMobile() ? 0.7 : 0.55);
+        n.x = (mainNode.x ?? 0) + Math.sin(ang) * r;
+        n.y = (mainNode.y ?? 0) + r * 0.85;
         ensureLink(mainId, qid);
       });
+      mobileFocus = mainId;
       render();
+      fitMobileView();
     }
 
     function activateQuestionLeads(qid: string) {
       const q = db[qid];
       if (!q?.leads) return;
-      q.leads.forEach((lid) => {
-        ensureNode(lid, nodeById[qid] ?? null);
+      const parent = nodeById[qid] ?? null;
+      const leads = q.leads;
+      const r = isMobile() ? 110 : 160;
+      leads.forEach((lid, i) => {
+        const n = ensureNode(lid, parent);
+        const ang = (i - (leads.length - 1) / 2) * (isMobile() ? 0.65 : 0.5);
+        n.x = (parent?.x ?? W() / 2) + Math.sin(ang) * r;
+        n.y = (parent?.y ?? H() / 2) + r * 0.9;
         ensureLink(qid, lid);
       });
+      mobileFocus = qid;
       render();
+      fitMobileView();
     }
 
     function reachableExcluding(id: string): Record<string, boolean> {
       const adjacency: Record<string, string[]> = {};
-      activeNodes.forEach((n) => { adjacency[n.id] = []; });
+      activeNodes.forEach((n) => {
+        adjacency[n.id] = [];
+      });
       activeLinks.forEach((l) => {
         const s = typeof l.source === 'object' ? l.source.id : l.source;
         const t = typeof l.target === 'object' ? l.target.id : l.target;
@@ -241,7 +306,10 @@ export default function GraphIsland({ content, fetchError }: Props) {
       while (queue.length) {
         const cur = queue.shift()!;
         (adjacency[cur] || []).forEach((nb) => {
-          if (!visited[nb]) { visited[nb] = true; queue.push(nb); }
+          if (!visited[nb]) {
+            visited[nb] = true;
+            queue.push(nb);
+          }
         });
       }
       visited[id] = true;
@@ -258,6 +326,7 @@ export default function GraphIsland({ content, fetchError }: Props) {
       activeNodes = activeNodes.filter((n) => {
         if (visited[n.id]) return true;
         delete nodeById[n.id];
+        delete parentOf[n.id];
         expanded.delete(n.id);
         return false;
       });
@@ -266,12 +335,44 @@ export default function GraphIsland({ content, fetchError }: Props) {
         const t = typeof l.target === 'object' ? l.target.id : l.target;
         return visited[s] && visited[t];
       });
+      if (!nodeById[mobileFocus]) mobileFocus = id;
+      if (!nodeById[mobileFocus]) mobileFocus = 'seed';
     }
 
     function toggleExpand(id: string) {
-      if (expanded.has(id)) expanded.delete(id);
-      else expanded.add(id);
+      if (expanded.has(id)) {
+        expanded.delete(id);
+        const n = nodeById[id];
+        if (n) {
+          n.fx = null;
+          n.fy = null;
+        }
+        mobileFocus = parentOf[id] || 'seed';
+      } else {
+        if (isMobile()) {
+          [...expanded].forEach((eid) => {
+            const en = nodeById[eid];
+            if (en && (en.type === 'project' || en.type === 'research' || eid === 'next')) {
+              expanded.delete(eid);
+              en.fx = null;
+              en.fy = null;
+            }
+          });
+        }
+        expanded.add(id);
+        mobileFocus = id;
+        if (isMobile()) {
+          const n = nodeById[id];
+          if (n) {
+            n.fx = W() / 2;
+            n.fy = H() / 2;
+            n.x = n.fx;
+            n.y = n.fy;
+          }
+        }
+      }
       render();
+      fitMobileView();
     }
 
     function wireSeedHover() {
@@ -298,11 +399,29 @@ export default function GraphIsland({ content, fetchError }: Props) {
     }
 
     function handleNodeClick(n: GraphNode) {
-      if (n.type === 'project' || n.type === 'research') { toggleExpand(n.id); return; }
-      if (n.type === 'main' && n.id === 'next') { toggleExpand('next'); return; }
-      if (hasDownstream(n.id)) { collapseFrom(n.id); render(); return; }
-      if (n.id === 'seed') { expandSeed(); return; }
-      if (n.id === 'that' || n.id === 'think') { expandMain(n.id); return; }
+      if (n.type === 'project' || n.type === 'research') {
+        toggleExpand(n.id);
+        return;
+      }
+      if (n.type === 'main' && n.id === 'next') {
+        toggleExpand('next');
+        return;
+      }
+      if (hasDownstream(n.id)) {
+        collapseFrom(n.id);
+        mobileFocus = n.id;
+        render();
+        fitMobileView();
+        return;
+      }
+      if (n.id === 'seed') {
+        expandSeed();
+        return;
+      }
+      if (n.id === 'that' || n.id === 'think') {
+        expandMain(n.id);
+        return;
+      }
       if (n.type === 'question') activateQuestionLeads(n.id);
     }
 
@@ -354,8 +473,14 @@ export default function GraphIsland({ content, fetchError }: Props) {
         e.stopPropagation();
         close();
       });
-      prevBtn.addEventListener('click', (e) => { e.stopPropagation(); go(-1); });
-      nextBtn.addEventListener('click', (e) => { e.stopPropagation(); go(1); });
+      prevBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        go(-1);
+      });
+      nextBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        go(1);
+      });
       overlay.addEventListener('click', (e) => {
         if (e.target === overlay || (e.target as HTMLElement).classList.contains('lb-stage')) close();
       });
@@ -394,7 +519,7 @@ export default function GraphIsland({ content, fetchError }: Props) {
         ring.querySelectorAll<HTMLElement>('[data-ang]').forEach((el) => {
           const base = Number(el.getAttribute('data-ang') || 0);
           const z = Number(el.getAttribute('data-z') || 200);
-          const rel = ((base + (d._angle || 0)) % 360 + 360) % 360;
+          const rel = (((base + (d._angle || 0)) % 360) + 360) % 360;
           const depth = Math.cos((rel * Math.PI) / 180);
           const scale = 0.78 + 0.28 * ((depth + 1) / 2);
           el.style.transform = `rotateY(${base}deg) translateZ(${z}px) scale(${scale})`;
@@ -411,7 +536,7 @@ export default function GraphIsland({ content, fetchError }: Props) {
 
         const onFace = !!target.closest('.drum-card3d, .drum-label3d');
         const onMoveHandle = !!target.closest('[data-drum-move]');
-        const wantMove = onMoveHandle;
+        const wantMove = onMoveHandle && !isMobile();
 
         e.stopPropagation();
         e.preventDefault();
@@ -491,12 +616,25 @@ export default function GraphIsland({ content, fetchError }: Props) {
 
     const simulation = d3
       .forceSimulation<GraphNode>([])
-      .force('link', d3.forceLink<GraphNode, GraphLink>([]).id((d) => d.id).distance(160).strength(0.35))
-      .force('charge', d3.forceManyBody().strength(-480))
-      .force('collision', d3.forceCollide<GraphNode>().radius((d) => {
-        const s = nodeSize(d, expanded);
-        return Math.max(s.w, s.h) * 0.42;
-      }))
+      .force(
+        'link',
+        d3
+          .forceLink<GraphNode, GraphLink>([])
+          .id((d) => d.id)
+          .distance(() => (isMobile() ? 100 : 160))
+          .strength(0.35)
+      )
+      .force(
+        'charge',
+        d3.forceManyBody().strength(() => (isMobile() ? -280 : -480))
+      )
+      .force(
+        'collision',
+        d3.forceCollide<GraphNode>().radius((d) => {
+          const s = nodeSize(d, expanded);
+          return Math.max(s.w, s.h) * 0.42;
+        })
+      )
       .force('x', d3.forceX(W() / 2).strength(0.025))
       .force('y', d3.forceY(H() / 2).strength(0.025))
       .on('tick', ticked);
@@ -516,7 +654,38 @@ export default function GraphIsland({ content, fetchError }: Props) {
     d3.select(svg).call(zoom as any);
     d3.select(svg).on('dblclick.zoom', null);
 
-    const onWheel = (e: WheelEvent) => { e.preventDefault(); };
+    function fitMobileView(force = false) {
+      if (!isMobile() && !force) return;
+      const visible = activeNodes.filter(isNodeVisible);
+      if (!visible.length) return;
+
+      let minX = Infinity,
+        maxX = -Infinity,
+        minY = Infinity,
+        maxY = -Infinity;
+      visible.forEach((d) => {
+        const s = nodeSize(d, expanded);
+        const x = d.x ?? W() / 2;
+        const y = d.y ?? H() / 2;
+        minX = Math.min(minX, x - s.w / 2);
+        maxX = Math.max(maxX, x + s.w / 2);
+        minY = Math.min(minY, y - s.h / 2);
+        maxY = Math.max(maxY, y + s.h / 2);
+      });
+      const padX = 28;
+      const padY = 72;
+      const bw = Math.max(maxX - minX, 40);
+      const bh = Math.max(maxY - minY, 40);
+      const k = Math.min((W() - padX * 2) / bw, (H() - padY * 2) / bh, isMobile() ? 1.15 : 1.4);
+      const cx = (minX + maxX) / 2;
+      const cy = (minY + maxY) / 2;
+      const next = d3.zoomIdentity.translate(W() / 2 - k * cx, H() / 2 - k * cy).scale(k);
+      d3.select(svg).transition().duration(320).call(zoom.transform as any, next);
+    }
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+    };
     root.addEventListener('wheel', onWheel, { passive: false });
 
     const onNodesWheel = (e: WheelEvent) => {
@@ -537,8 +706,8 @@ export default function GraphIsland({ content, fetchError }: Props) {
       activeNodes.forEach((d) => {
         if (d.fx != null || expanded.has(d.id)) return;
         if (!d._wanderAt || now > d._wanderAt) {
-          d._wanderTargetX = (d.x ?? 0) + (Math.random() - 0.5) * 80;
-          d._wanderTargetY = (d.y ?? 0) + (Math.random() - 0.5) * 80;
+          d._wanderTargetX = (d.x ?? 0) + (Math.random() - 0.5) * (isMobile() ? 40 : 80);
+          d._wanderTargetY = (d.y ?? 0) + (Math.random() - 0.5) * (isMobile() ? 40 : 80);
           d._wanderAt = now + 3500 + Math.random() * 2000;
         }
         if (d._wanderTargetX != null && d.x != null && d.y != null) {
@@ -546,11 +715,13 @@ export default function GraphIsland({ content, fetchError }: Props) {
           d.y += (d._wanderTargetY! - d.y) * 0.006;
         }
       });
-      d3.select(linksLayer).selectAll<SVGPathElement, GraphLink>('path.link').attr('d', (d) => {
-        const s = d.source as GraphNode;
-        const t = d.target as GraphNode;
-        return `M${s.x},${s.y}L${t.x},${t.y}`;
-      });
+      d3.select(linksLayer)
+        .selectAll<SVGPathElement, GraphLink>('path.link')
+        .attr('d', (d) => {
+          const s = d.source as GraphNode;
+          const t = d.target as GraphNode;
+          return `M${s.x},${s.y}L${t.x},${t.y}`;
+        });
       nodesLayer.querySelectorAll<HTMLElement>('.graph-node').forEach((el) => {
         const d = nodeById[el.dataset.id!];
         if (!d) return;
@@ -581,9 +752,11 @@ export default function GraphIsland({ content, fetchError }: Props) {
         return `<button type="button" class="${cls}">${txt}</button>`;
       }
       const cls =
-        d.type === 'main' ? 'n-btn n-main-btn'
-        : d.type === 'question' ? 'n-btn n-q-btn'
-        : 'n-btn';
+        d.type === 'main'
+          ? 'n-btn n-main-btn'
+          : d.type === 'question'
+            ? 'n-btn n-q-btn'
+            : 'n-btn';
       return `<button type="button" class="${cls}">${labelFor(d)}</button>`;
     }
 
@@ -600,16 +773,31 @@ export default function GraphIsland({ content, fetchError }: Props) {
       .on('start', (event, d) => {
         event.sourceEvent?.stopPropagation();
         if (!event.active) simulation.alphaTarget(0.25).restart();
-        d.fx = d.x; d.fy = d.y;
+        d.fx = d.x;
+        d.fy = d.y;
       })
-      .on('drag', (event, d) => { d.fx = event.x; d.fy = event.y; })
-      .on('end', (event) => { if (!event.active) simulation.alphaTarget(0); });
+      .on('drag', (event, d) => {
+        d.fx = event.x;
+        d.fy = event.y;
+      })
+      .on('end', (event) => {
+        if (!event.active) simulation.alphaTarget(0);
+      });
 
     function render() {
+      const visibleLinks = activeLinks.filter((l) => {
+        const sId = typeof l.source === 'object' ? l.source.id : l.source;
+        const tId = typeof l.target === 'object' ? l.target.id : l.target;
+        const sn = nodeById[sId];
+        const tn = nodeById[tId];
+        if (!sn || !tn) return false;
+        return isNodeVisible(sn) && isNodeVisible(tn);
+      });
+
       const linkSel = d3
         .select(linksLayer)
         .selectAll<SVGPathElement, GraphLink>('path.link')
-        .data(activeLinks, (d) => {
+        .data(visibleLinks, (d) => {
           const s = typeof d.source === 'object' ? d.source.id : d.source;
           const t = typeof d.target === 'object' ? d.target.id : d.target;
           return `${s}|${t}`;
@@ -617,7 +805,9 @@ export default function GraphIsland({ content, fetchError }: Props) {
       linkSel.exit().remove();
       linkSel.enter().append('path').attr('class', 'link').attr('fill', 'none');
 
-      const existing = new Set(Array.from(nodesLayer.querySelectorAll('.graph-node')).map((el) => (el as HTMLElement).dataset.id));
+      const existing = new Set(
+        Array.from(nodesLayer.querySelectorAll('.graph-node')).map((el) => (el as HTMLElement).dataset.id)
+      );
 
       activeNodes.forEach((d) => {
         let el = nodesLayer.querySelector(`[data-id="${CSS.escape(d.id)}"]`) as HTMLElement | null;
@@ -627,12 +817,24 @@ export default function GraphIsland({ content, fetchError }: Props) {
           el = document.createElement('div');
           el.className = `graph-node n-${d.type}`;
           el.dataset.id = d.id;
-          el.style.cssText = 'position:absolute;left:0;top:0;pointer-events:auto;display:flex;align-items:center;justify-content:center;text-align:center';
+          el.style.cssText =
+            'position:absolute;left:0;top:0;pointer-events:auto;display:flex;align-items:center;justify-content:center;text-align:center';
           nodesLayer.appendChild(el);
           d3.select(el).datum(d).call(drag as any);
           el.addEventListener('click', (ev) => {
             const t = ev.target as HTMLElement;
-            if (t.closest('[data-close]')) { expanded.delete(d.id); render(); return; }
+            if (t.closest('[data-close]')) {
+              expanded.delete(d.id);
+              const n = nodeById[d.id];
+              if (n) {
+                n.fx = null;
+                n.fy = null;
+              }
+              mobileFocus = parentOf[d.id] || 'seed';
+              render();
+              fitMobileView();
+              return;
+            }
             if (t.closest('[data-drum]')) return;
             handleNodeClick(nodeById[d.id] || d);
           });
@@ -640,7 +842,17 @@ export default function GraphIsland({ content, fetchError }: Props) {
 
         el.innerHTML = isExp ? expandedHTML(d) : collapsedHTML(d);
         el.classList.toggle('is-expanded', isExp);
+        const vis = isNodeVisible(d);
+        el.style.visibility = vis ? 'visible' : 'hidden';
+        el.style.pointerEvents = vis ? 'auto' : 'none';
+        el.setAttribute('aria-hidden', vis ? 'false' : 'true');
         if (isExp && el.querySelector('[data-drum]')) wireDrum(el, d);
+        if (isMobile() && isExp && (d.type === 'project' || d.type === 'research' || d.id === 'next')) {
+          d.fx = W() / 2;
+          d.fy = H() / 2;
+          d.x = d.fx;
+          d.y = d.fy;
+        }
         existing.delete(d.id);
       });
 
@@ -657,19 +869,25 @@ export default function GraphIsland({ content, fetchError }: Props) {
     const seed = ensureNode('seed', null);
     seed.x = W() / 2;
     seed.y = H() / 2;
+    mobileFocus = 'seed';
     render();
+    fitMobileView();
 
     const resetBtn = document.getElementById('resetMap');
     const onReset = () => {
       activeNodes = [];
       activeLinks = [];
       Object.keys(nodeById).forEach((k) => delete nodeById[k]);
+      Object.keys(parentOf).forEach((k) => delete parentOf[k]);
       expanded.clear();
+      mobileFocus = 'seed';
       const s = ensureNode('seed', null);
-      s.x = W() / 2; s.y = H() / 2;
+      s.x = W() / 2;
+      s.y = H() / 2;
       d3.select(svg).call(zoom.transform as any, d3.zoomIdentity);
       transform = d3.zoomIdentity;
       render();
+      fitMobileView();
     };
     resetBtn?.addEventListener('click', onReset);
     if (resetBtn) resetBtn.textContent = L(DEFAULT_UI.resetMap);
@@ -688,6 +906,15 @@ export default function GraphIsland({ content, fetchError }: Props) {
       simulation.force('x', d3.forceX(W() / 2).strength(0.025));
       simulation.force('y', d3.forceY(H() / 2).strength(0.025));
       simulation.alpha(0.3).restart();
+      const drum = drumOpenId();
+      if (isMobile() && drum && nodeById[drum]) {
+        const n = nodeById[drum];
+        n.fx = W() / 2;
+        n.fy = H() / 2;
+        n.x = n.fx;
+        n.y = n.fy;
+      }
+      fitMobileView();
     };
     window.addEventListener('resize', onResize);
 
@@ -872,6 +1099,21 @@ export default function GraphIsland({ content, fetchError }: Props) {
         }
         @media (prefers-reduced-motion: reduce) {
           .drum-ring3d { transition: none !important; }
+        }
+        @media (max-width: 768px) {
+          .n-seed-btn { font-size: clamp(22px, 7vw, 36px); }
+          .n-main-btn { font-size: clamp(22px, 6vw, 32px); }
+          .n-q-btn { font-size: 14px; max-width: 240px; }
+          .drum-card3d {
+            width: 150px; height: 105px; margin: -52px 0 0 -75px;
+          }
+          .drum-label3d {
+            width: 140px; margin: -40px 0 0 -70px;
+          }
+          .drum-label3d .lbl-inner { font-size: 10px; }
+          .drum-scene {
+            -webkit-perspective: 900px; perspective: 900px;
+          }
         }
       `}</style>
       <svg id="graphSvg">
