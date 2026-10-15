@@ -615,7 +615,7 @@ export default function GraphIsland({ content, fetchError }: Props) {
           return `${s}|${t}`;
         });
       linkSel.exit().remove();
-      linkSel.enter().append('path').attr('class', 'link').attr('stroke', '#111110').attr('stroke-opacity', 0.18).attr('stroke-width', 1).attr('fill', 'none');
+      linkSel.enter().append('path').attr('class', 'link').attr('fill', 'none');
 
       const existing = new Set(Array.from(nodesLayer.querySelectorAll('.graph-node')).map((el) => (el as HTMLElement).dataset.id));
 
@@ -718,6 +718,13 @@ export default function GraphIsland({ content, fetchError }: Props) {
         #graph-root { touch-action: none; overscroll-behavior: none; }
         #graphSvg { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
         #graphSvg:active { cursor: grabbing; }
+        path.link {
+          stroke: var(--black);
+          stroke-opacity: 0.22;
+          stroke-width: 1;
+          fill: none;
+          transition: stroke 0.35s ease;
+        }
         #nodesLayer { position: absolute; inset: 0; pointer-events: none; }
         .graph-node { pointer-events: auto; will-change: transform; }
         .n-btn { font: inherit; background: none; border: 0; cursor: pointer; color: var(--black); text-align: center; }
