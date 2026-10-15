@@ -505,12 +505,17 @@ export default function GraphIsland({ content, fetchError }: Props) {
       const comp = wrap.querySelector('.drum-comp') as HTMLElement | null;
       if (!ring || !scene || !comp) return;
 
-      if (!comp.querySelector('[data-drum-move]')) {
+      if (!isMobile() && !comp.querySelector('[data-drum-move]')) {
         const handle = document.createElement('div');
         handle.className = 'drum-move-handle';
         handle.setAttribute('data-drum-move', '1');
         handle.setAttribute('aria-label', 'Drag to move');
         comp.appendChild(handle);
+      }
+      if (isMobile()) {
+        comp.querySelector('[data-drum-move]')?.remove();
+        scene.style.touchAction = 'none';
+        comp.style.touchAction = 'none';
       }
 
       if (d._angle == null) d._angle = 0;
@@ -540,6 +545,9 @@ export default function GraphIsland({ content, fetchError }: Props) {
 
         e.stopPropagation();
         e.preventDefault();
+        try {
+          scene.setPointerCapture?.(e.pointerId);
+        } catch (_) {}
 
         if (wantMove) {
           moving = true;
@@ -770,18 +778,34 @@ export default function GraphIsland({ content, fetchError }: Props) {
     const drag = d3
       .drag<HTMLElement, GraphNode>()
       .clickDistance(6)
+      .filter(function (event) {
+        const t = event.target as HTMLElement | null;
+        if (t?.closest?.('[data-drum], .drum-scene, .drum-comp, .drum-card3d, .drum-label3d, .exp-close, a')) {
+          return false;
+        }
+        const el = this as HTMLElement;
+        const id = el?.dataset?.id || '';
+        if (isMobile() && id && expanded.has(id)) return false;
+        return !event.ctrlKey && !event.button;
+      })
       .on('start', (event, d) => {
         event.sourceEvent?.stopPropagation();
+        if (expanded.has(d.id) && (d.type === 'project' || d.type === 'research' || d.id === 'next')) return;
         if (!event.active) simulation.alphaTarget(0.25).restart();
         d.fx = d.x;
         d.fy = d.y;
       })
       .on('drag', (event, d) => {
+        if (expanded.has(d.id) && (d.type === 'project' || d.type === 'research' || d.id === 'next')) return;
         d.fx = event.x;
         d.fy = event.y;
       })
-      .on('end', (event) => {
+      .on('end', (event, d) => {
         if (!event.active) simulation.alphaTarget(0);
+        if (isMobile() && expanded.has(d.id) && (d.type === 'project' || d.type === 'research' || d.id === 'next')) {
+          d.fx = W() / 2;
+          d.fy = H() / 2;
+        }
       });
 
     function render() {
@@ -1113,6 +1137,14 @@ export default function GraphIsland({ content, fetchError }: Props) {
           .drum-label3d .lbl-inner { font-size: 10px; }
           .drum-scene {
             -webkit-perspective: 900px; perspective: 900px;
+            touch-action: none;
+          }
+          .drum-comp, .drum-tilt, .drum-ring3d {
+            touch-action: none;
+          }
+          .drum-move-handle { display: none !important; }
+          .graph-node.is-expanded {
+            touch-action: none;
           }
         }
       `}</style>
